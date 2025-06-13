@@ -3,8 +3,6 @@ services:
   - type: redis
     name: real-estate-redis
     plan: starter
-    maxConnections: 100
-    ipAllowList: [] # Allow connections from all Render services
 
   # API Service
   - type: web
@@ -38,7 +36,7 @@ services:
         fromService:
           type: web
           name: real-estate-web
-          property: host
+          property: url
 
   # Web Frontend
   - type: web
@@ -54,7 +52,7 @@ services:
         fromService:
           type: web
           name: real-estate-api
-          property: host
+          property: url
       - key: NEXT_PUBLIC_MAPBOX_TOKEN
         sync: false
       - key: NEXT_PUBLIC_GA_ID
