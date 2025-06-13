@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PropertyProvider } from '@/lib/property-provider';
-import { SearchFilters, PropertyListing } from '@/types/api';
+import { SearchFilters } from '@/types/api';
 
 const propertyProvider = new PropertyProvider();
 
