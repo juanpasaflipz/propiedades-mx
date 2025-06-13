@@ -22,7 +22,7 @@ services:
         sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
         fromService:
-          type: pserv
+          type: redis
           name: real-estate-redis
           property: connectionString
       - key: API_KEY
@@ -73,7 +73,7 @@ services:
         sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
         fromService:
-          type: pserv
+          type: redis
           name: real-estate-redis
           property: connectionString
       - key: SCRAPINGBEE_API_KEY
