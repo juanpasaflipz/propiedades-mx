@@ -1,8 +1,13 @@
 import * as cheerio from 'cheerio';
-import { Property } from '../types.js';
+import { Property } from '@aggregator/types';
 
 export class PulppoScraper {
   private propertyIdCounter: number = 1;
+
+  async scrape(): Promise<void> {
+    // TODO: Implement actual scraping logic
+    console.log('Pulppo scraping not implemented yet');
+  }
 
   /**
    * Parse Pulppo HTML and extract property data
@@ -24,13 +29,18 @@ export class PulppoScraper {
       '[class*="listing-card"]'
     ];
 
-    let $listings = $([]);
+    let $listings: cheerio.Cheerio<cheerio.Element> | null = null;
     for (const selector of selectors) {
-      $listings = $(selector);
-      if ($listings.length > 0) {
-        console.log(`Found ${$listings.length} listings with selector: ${selector}`);
+      const found = $(selector);
+      if (found.length > 0) {
+        console.log(`Found ${found.length} listings with selector: ${selector}`);
+        $listings = found;
         break;
       }
+    }
+
+    if (!$listings || $listings.length === 0) {
+      return properties;
     }
 
     $listings.each((_, element) => {

@@ -1,8 +1,13 @@
 import * as cheerio from 'cheerio';
-import { Property } from '../types.js';
+import { Property } from '@aggregator/types';
 
 export class MercadoLibreScraper {
   private propertyIdCounter: number = 1;
+
+  async scrape(): Promise<void> {
+    // TODO: Implement actual scraping logic
+    console.log('MercadoLibre scraping not implemented yet');
+  }
 
   /**
    * Parse MercadoLibre HTML and extract property data
