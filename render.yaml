@@ -10,7 +10,7 @@ services:
     name: real-estate-api
     runtime: node
     plan: starter
-    buildCommand: cd apps/api && npm install && npm run build
+    buildCommand: npm install && npm run build --filter=@aggregator/api
     startCommand: cd apps/api && npm run start:prod
     healthCheckPath: /api/health
     envVars:
@@ -44,7 +44,7 @@ services:
     name: real-estate-web
     runtime: node
     plan: starter
-    buildCommand: cd apps/web && npm install && npm run build
+    buildCommand: npm install && npm run build --filter=@aggregator/web
     startCommand: cd apps/web && npm start
     envVars:
       - key: NODE_ENV
@@ -64,7 +64,7 @@ services:
     name: real-estate-scraper
     runtime: node
     plan: starter
-    buildCommand: cd apps/scraper && npm install && npm run build
+    buildCommand: npm install && npm run build --filter=@aggregator/scraper
     startCommand: cd apps/scraper && npm run start
     envVars:
       - key: NODE_ENV
