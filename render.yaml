@@ -1,9 +1,3 @@
-databases:
-  - name: real-estate-db
-    plan: starter
-    databaseName: real_estate_mx
-    user: postgres
-
 services:
   # Redis Cache
   - type: redis
@@ -25,10 +19,7 @@ services:
       - key: PORT
         value: 3001
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: real-estate-db
-          property: connectionString
+        sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
         fromService:
           type: pserv
@@ -79,10 +70,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: real-estate-db
-          property: connectionString
+        sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
         fromService:
           type: pserv
