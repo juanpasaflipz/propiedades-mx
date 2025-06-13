@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY turbo.json ./
+
+# Copy workspace package files
+COPY apps/scraper/package*.json ./apps/scraper/
+COPY packages/*/package*.json ./packages/*/
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the scraper
+RUN npm run build --filter=@aggregator/scraper
+
+CMD ["npm", "run", "start", "--workspace=@aggregator/scraper"]

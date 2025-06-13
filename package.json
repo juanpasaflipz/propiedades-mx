@@ -1,0 +1,39 @@
+{
+  "name": "real-estate-aggregator-mx",
+  "version": "1.0.0",
+  "description": "Consolidated Mexican Real Estate Aggregator platform combining the best features from multiple repositories.",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:migrate": "turbo run db:migrate",
+    "scraper:dev": "turbo run dev --filter=@aggregator/scraper",
+    "api:dev": "turbo run dev --filter=@aggregator/api",
+    "web:dev": "turbo run dev --filter=@aggregator/web",
+    "dev:all": "turbo run dev --parallel"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "npm@10.2.4",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.34.0",
+    "@typescript-eslint/parser": "^8.34.0",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "noEmit": true,
+    "incremental": true,
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@aggregator/database": ["./packages/database/src"],
+      "@aggregator/types": ["./packages/types/src"],
+      "@aggregator/ui": ["./packages/ui/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", ".next"]
+}
