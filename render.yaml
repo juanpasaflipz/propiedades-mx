@@ -1,10 +1,4 @@
 services:
-  # Redis Cache
-  - type: redis
-    name: real-estate-redis
-    plan: starter
-    ipAllowList: [] # Allow connections from Render services
-
   # API Service
   - type: web
     name: real-estate-api
@@ -21,10 +15,7 @@ services:
       - key: DATABASE_URL
         sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: real-estate-redis
-          property: connectionString
+        sync: false # Optional - set if using external Redis service
       - key: API_KEY
         generateValue: true
       - key: JWT_SECRET
@@ -72,10 +63,7 @@ services:
       - key: DATABASE_URL
         sync: false # Set this in Render dashboard using existing database
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: real-estate-redis
-          property: connectionString
+        sync: false # Optional - set if using external Redis service
       - key: SCRAPINGBEE_API_KEY
         sync: false
       - key: SCRAPEDO_TOKEN
