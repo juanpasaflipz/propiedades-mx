@@ -25,14 +25,21 @@ export class ApiMonitorService {
   private pool: Pool | null = null;
 
   constructor() {
-    if (process.env.DB_USER && process.env.DB_HOST) {
-      this.pool = new Pool({
-        user: process.env.DB_USER,
+    if (process.env.DATABASE_URL || (process.env.DB_USER && process.env.DB_HOST)) {
+      if (process.env.DATABASE_URL) {
+        this.pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+      } else {
+        this.pool = new Pool({
+          user: process.env.DB_USER,
         host: process.env.DB_HOST,
         database: process.env.DB_NAME,
         password: process.env.DB_PASSWORD,
         port: parseInt(process.env.DB_PORT || '5432'),
-      });
+        });
+      }
     }
   }
 

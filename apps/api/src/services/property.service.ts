@@ -6,16 +6,27 @@ export class PropertyService {
   private useMockData: boolean;
 
   constructor() {
-    this.useMockData = !process.env.DB_USER || !process.env.DB_HOST;
+    // Check for DATABASE_URL first (for Railway/Render), then individual vars
+    const hasDatabase = process.env.DATABASE_URL || (process.env.DB_USER && process.env.DB_HOST);
+    this.useMockData = !hasDatabase;
     
     if (!this.useMockData) {
-      this.pool = new Pool({
-        user: process.env.DB_USER,
-        host: process.env.DB_HOST,
-        database: process.env.DB_NAME,
-        password: process.env.DB_PASSWORD,
-        port: parseInt(process.env.DB_PORT || '5432'),
-      });
+      if (process.env.DATABASE_URL) {
+        // Use connection string (Railway, Render, etc.)
+        this.pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+      } else {
+        // Use individual variables (local dev)
+        this.pool = new Pool({
+          user: process.env.DB_USER,
+          host: process.env.DB_HOST,
+          database: process.env.DB_NAME,
+          password: process.env.DB_PASSWORD,
+          port: parseInt(process.env.DB_PORT || '5432'),
+        });
+      }
     }
   }
 
