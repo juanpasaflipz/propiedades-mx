@@ -71,8 +71,17 @@ app.get('/', (req, res) => {
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Health check endpoint
+// Health check endpoints (both paths for compatibility)
 app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
