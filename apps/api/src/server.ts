@@ -44,6 +44,27 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Real Estate Aggregator API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      properties: {
+        search: '/api/properties/search',
+        byId: '/api/properties/:id',
+        byCountry: '/api/properties/country/:country',
+        byCity: '/api/properties/city/:city'
+      },
+      admin: {
+        apiLogs: '/api/admin/api-logs',
+        apiProviders: '/api/admin/api-providers'
+      }
+    }
+  });
+});
+
 // Routes
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
