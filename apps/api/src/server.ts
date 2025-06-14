@@ -10,7 +10,7 @@ import { adminRoutes } from './routes/admin.routes';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3003;
+const port = parseInt(process.env.PORT || '3003', 10);
 
 // Security middleware
 app.use(helmet());
@@ -94,7 +94,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Graceful shutdown
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`Server is running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`Health check available at http://0.0.0.0:${port}/health`);
+});
+
+// Keep the process alive
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   server.close(() => {
@@ -103,6 +108,19 @@ process.on('SIGTERM', () => {
   });
 });
 
-const server = app.listen(port, () => {
-  console.log(`Server is running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit on uncaught exceptions in production
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit on unhandled rejections in production
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 }); 
