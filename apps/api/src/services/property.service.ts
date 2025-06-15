@@ -11,12 +11,24 @@ export class PropertyService {
     this.useMockData = !hasDatabase;
     
     if (!this.useMockData) {
+      console.log('Attempting to connect to database...');
       if (process.env.DATABASE_URL) {
+        console.log('Using DATABASE_URL connection string');
         // Use connection string (Railway, Render, etc.)
         this.pool = new Pool({
           connectionString: process.env.DATABASE_URL,
           ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
         });
+        
+        // Test the connection
+        this.pool.connect()
+          .then(client => {
+            console.log('Database connected successfully');
+            client.release();
+          })
+          .catch(err => {
+            console.error('Database connection error:', err.message);
+          });
       } else {
         // Use individual variables (local dev)
         this.pool = new Pool({
@@ -27,6 +39,8 @@ export class PropertyService {
           port: parseInt(process.env.DB_PORT || '5432'),
         });
       }
+    } else {
+      console.log('Using mock data - no database configured');
     }
   }
 

@@ -11,6 +11,7 @@ export class PropertyController {
   searchProperties = async (req: Request, res: Response) => {
     try {
       const filters = req.query;
+      console.log('Searching properties with filters:', filters);
       const properties = await this.propertyService.searchProperties(filters);
       
       // Transform properties to match frontend expectations
@@ -43,7 +44,11 @@ export class PropertyController {
         totalPages: 1
       });
     } catch (error) {
-      res.status(500).json({ error: 'Error searching properties' });
+      console.error('Error searching properties:', error);
+      res.status(500).json({ 
+        error: 'Error searching properties',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   };
 
