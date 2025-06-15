@@ -17,14 +17,10 @@ export class PropertyController {
       // Transform properties to match frontend expectations
       const transformedProperties = properties.map(property => ({
         id: property.id,
-        title: property.description,
+        title: property.description || property.address || 'Property',
         price: property.price.amount,
         currency: property.price.currency,
-        location: {
-          city: property.city,
-          country: property.country,
-          address: property.address,
-        },
+        location: `${property.city}${property.state_province ? ', ' + property.state_province : ''}`,
         propertyType: property.property_type,
         transactionType: property.transaction_type,
         bedrooms: property.bedrooms,
