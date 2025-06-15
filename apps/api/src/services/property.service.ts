@@ -195,6 +195,16 @@ export class PropertyService {
       }
 
       console.log('Executing database query with filters:', filters);
+      
+      // First, let's check if the table exists and has data
+      const tableCheckQuery = 'SELECT COUNT(*) FROM properties';
+      try {
+        const countResult = await this.pool!.query(tableCheckQuery);
+        console.log('Total properties in database:', countResult.rows[0].count);
+      } catch (tableError) {
+        console.error('Error checking table:', tableError);
+      }
+      
       const query = `
       SELECT * FROM properties
       WHERE ($1::text IS NULL OR country = $1)
@@ -207,7 +217,7 @@ export class PropertyService {
       AND ($8::int IS NULL OR bathrooms >= $8)
       AND ($9::text IS NULL OR LOWER(neighborhood) LIKE LOWER('%' || $9 || '%'))
       AND ($10::text IS NULL OR postal_code = $10)
-      ORDER BY created_at DESC
+      ORDER BY listing_date DESC
       LIMIT 50
     `;
 

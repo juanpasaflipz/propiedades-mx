@@ -69,6 +69,40 @@ app.get('/', (req, res) => {
   });
 });
 
+// Test endpoint for debugging
+app.get('/api/test-db', async (req, res) => {
+  if (!process.env.DATABASE_URL) {
+    return res.json({ error: 'No DATABASE_URL configured' });
+  }
+  
+  const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL, 
+    ssl: { rejectUnauthorized: false } 
+  });
+  
+  try {
+    // Test basic query
+    const result = await pool.query('SELECT * FROM properties LIMIT 1');
+    const columns = Object.keys(result.rows[0] || {});
+    
+    res.json({
+      success: true,
+      rowCount: result.rowCount,
+      columns: columns,
+      sampleRow: result.rows[0]
+    });
+  } catch (error: any) {
+    res.json({
+      success: false,
+      error: error.message,
+      hint: error.hint,
+      detail: error.detail
+    });
+  } finally {
+    await pool.end();
+  }
+});
+
 // Routes
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
@@ -105,7 +139,17 @@ app.get('/api/health', async (req, res) => {
       if (tableExists) {
         const countResult = await pool.query('SELECT COUNT(*) FROM properties');
         propertyCount = parseInt(countResult.rows[0].count);
+        
+        // Get column information
+        const columnsQuery = await pool.query(`
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'properties'
+          ORDER BY ordinal_position;
+        `);
+        
         databaseStatus = 'connected';
+        res.locals.columns = columnsQuery.rows;
       } else {
         databaseStatus = 'table_missing';
       }
@@ -126,7 +170,8 @@ app.get('/api/health', async (req, res) => {
       status: databaseStatus,
       tableExists,
       propertyCount,
-      hasUrl: !!process.env.DATABASE_URL
+      hasUrl: !!process.env.DATABASE_URL,
+      columns: res.locals.columns || []
     }
   });
 });

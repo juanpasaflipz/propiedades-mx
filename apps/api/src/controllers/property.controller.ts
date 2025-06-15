@@ -43,11 +43,12 @@ export class PropertyController {
         page: 1,
         totalPages: 1
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching properties:', error);
       res.status(500).json({ 
         error: 'Error searching properties',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   };
