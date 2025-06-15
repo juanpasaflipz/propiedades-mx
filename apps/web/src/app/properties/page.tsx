@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Filter, X, ChevronDown, Home } from 'lucide-react';
+import { Search, MapPin, Filter, X, ChevronDown, Home, Loader2 } from 'lucide-react';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { cn } from '@/lib/utils';
+import { PropertyProvider } from '@/lib/property-provider';
+import { SearchFilters } from '@/types/api';
 
 // Mock data for demonstration
 const mockProperties = [
@@ -104,57 +106,70 @@ export default function PropertiesPage() {
   const [propertyType, setPropertyType] = useState('All');
   const [transactionType, setTransactionType] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
-  const [properties, setProperties] = useState(mockProperties);
-  const [loading, setLoading] = useState(false);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter properties based on criteria
+  // Create property provider instance
+  const propertyProvider = new PropertyProvider();
+
+  // Fetch properties from API
   useEffect(() => {
-    let filtered = [...mockProperties];
-
-    // Search query filter
-    if (searchQuery) {
-      filtered = filtered.filter(p => 
-        p.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Location filter
-    if (locationFilter) {
-      filtered = filtered.filter(p => 
-        p.location.toLowerCase().includes(locationFilter.toLowerCase())
-      );
-    }
-
-    // Property type filter
-    if (propertyType !== 'All') {
-      filtered = filtered.filter(p => p.propertyType === propertyType);
-    }
-
-    // Transaction type filter
-    if (transactionType !== 'All') {
-      filtered = filtered.filter(p => 
-        p.transactionType === transactionType.toLowerCase()
-      );
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'price-asc':
-          return a.price - b.price;
-        case 'price-desc':
-          return b.price - a.price;
-        case 'area-asc':
-          return (a.area || 0) - (b.area || 0);
-        case 'area-desc':
-          return (b.area || 0) - (a.area || 0);
-        default:
-          return 0;
+    async function fetchProperties() {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Build search filters
+        const filters: SearchFilters = {
+          country: 'Mexico', // Default to Mexico
+        };
+        
+        if (locationFilter) {
+          filters.city = locationFilter;
+        }
+        
+        if (propertyType !== 'All') {
+          filters.propertyType = propertyType.toLowerCase();
+        }
+        
+        if (transactionType !== 'All') {
+          filters.transactionType = transactionType.toLowerCase() as 'sale' | 'rent';
+        }
+        
+        // Fetch from API
+        const response = await propertyProvider.searchProperties(filters, 1, 50);
+        
+        let listings = response.listings;
+        
+        // Apply client-side sorting
+        listings.sort((a, b) => {
+          switch (sortBy) {
+            case 'price-asc':
+              return a.price - b.price;
+            case 'price-desc':
+              return b.price - a.price;
+            case 'area-asc':
+              return (a.area || 0) - (b.area || 0);
+            case 'area-desc':
+              return (b.area || 0) - (a.area || 0);
+            default:
+              return 0;
+          }
+        });
+        
+        setProperties(listings);
+      } catch (err) {
+        console.error('Error fetching properties:', err);
+        setError('Failed to load properties. Please try again.');
+        setProperties([]);
+      } finally {
+        setLoading(false);
       }
-    });
+    }
 
-    setProperties(filtered);
-  }, [searchQuery, locationFilter, sortBy, propertyType, transactionType]);
+    fetchProperties();
+  }, [locationFilter, propertyType, transactionType, sortBy]);
 
   return (
     <div className="min-h-screen">
@@ -328,30 +343,58 @@ export default function PropertiesPage() {
             </motion.p>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Loading properties...</h3>
+              <p className="text-muted-foreground">Fetching the latest listings for you</p>
+            </motion.div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <X className="w-16 h-16 mx-auto text-destructive mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Error loading properties</h3>
+              <p className="text-muted-foreground">{error}</p>
+            </motion.div>
+          )}
+
           {/* Property Grid */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <AnimatePresence>
-              {properties.map((property, index) => (
-                <motion.div
-                  key={property.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <ModernPropertyCard {...property} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          {!loading && !error && properties.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              <AnimatePresence>
+                {properties.map((property, index) => (
+                  <motion.div
+                    key={property.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <ModernPropertyCard {...property} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
 
           {/* Empty State */}
-          {properties.length === 0 && (
+          {!loading && !error && properties.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
