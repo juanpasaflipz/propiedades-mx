@@ -7,34 +7,34 @@ export class PropertyService {
 
   private mapDbRowToProperty(row: any): Property {
     return {
-      id: row.id,
+      id: row.id.toString(),
       source: row.source,
-      country: row.country,
-      state_province: row.state_province,
-      city: row.city,
-      neighborhood: row.neighborhood,
-      postal_code: row.postal_code,
-      address: row.address,
+      country: 'Mexico', // Default since not in DB
+      state_province: row.state || '',
+      city: row.city || '',
+      neighborhood: '', // Not in DB
+      postal_code: '', // Not in DB
+      address: row.location || '',
       coordinates: {
-        lat: parseFloat(row.coordinates_lat),
-        lng: parseFloat(row.coordinates_lng)
+        lat: 0, // Not in DB
+        lng: 0  // Not in DB
       },
-      transaction_type: row.transaction_type,
+      transaction_type: 'sale', // Default since not in DB
       price: {
-        amount: parseFloat(row.price_amount),
-        currency: row.price_currency
+        amount: parseFloat(row.price),
+        currency: row.currency || 'MXN'
       },
-      property_type: row.property_type,
-      bedrooms: row.bedrooms,
-      bathrooms: row.bathrooms,
-      area_sqm: parseFloat(row.area_sqm),
-      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : null,
-      amenities: row.amenities || [],
-      images: row.images || [],
-      description: row.description,
-      contact_info: row.contact_info,
-      listing_date: row.listing_date,
-      last_updated: row.last_updated
+      property_type: row.property_type || 'house',
+      bedrooms: row.bedrooms || 0,
+      bathrooms: row.bathrooms || 0,
+      area_sqm: parseFloat(row.size) || 0,
+      lot_size_sqm: null,
+      amenities: [],
+      images: [], // Could parse from link
+      description: row.description || row.title || '',
+      contact_info: row.link || '',
+      listing_date: row.created_at,
+      last_updated: row.updated_at
     };
   }
 
@@ -205,31 +205,44 @@ export class PropertyService {
         console.error('Error checking table:', tableError);
       }
       
+      // If no filters are provided, return all properties
+      const hasFilters = filters.country || filters.city || filters.transactionType || 
+                       filters.minPrice || filters.maxPrice || filters.propertyType || 
+                       filters.minBedrooms || filters.minBathrooms || filters.area || filters.zipCode;
+      
+      if (!hasFilters) {
+        console.log('No filters provided, returning all properties');
+        const simpleQuery = 'SELECT * FROM properties ORDER BY created_at DESC LIMIT 50';
+        const result = await this.pool!.query(simpleQuery);
+        console.log(`Database query returned ${result.rows.length} properties`);
+        return result.rows.map(row => this.mapDbRowToProperty(row));
+      }
+      
       const query = `
       SELECT * FROM properties
-      WHERE ($1::text IS NULL OR country = $1)
-      AND ($2::text IS NULL OR city = $2)
-      AND ($3::text IS NULL OR transaction_type = $3)
-      AND ($4::numeric IS NULL OR price_amount >= $4)
-      AND ($5::numeric IS NULL OR price_amount <= $5)
-      AND ($6::text IS NULL OR property_type = $6)
+      WHERE ($1::text IS NULL OR state = $1)
+      AND ($2::text IS NULL OR city ILIKE '%' || $2 || '%')
+      AND ($3::text IS NULL OR true) -- transaction_type not in DB
+      AND ($4::numeric IS NULL OR CAST(price AS NUMERIC) >= $4)
+      AND ($5::numeric IS NULL OR CAST(price AS NUMERIC) <= $5)
+      AND ($6::text IS NULL OR property_type ILIKE '%' || $6 || '%')
       AND ($7::int IS NULL OR bedrooms >= $7)
       AND ($8::int IS NULL OR bathrooms >= $8)
-      AND ($9::text IS NULL OR LOWER(neighborhood) LIKE LOWER('%' || $9 || '%'))
-      AND ($10::text IS NULL OR postal_code = $10)
-      ORDER BY listing_date DESC
+      AND ($9::text IS NULL OR location ILIKE '%' || $9 || '%')
+      AND ($10::text IS NULL OR true) -- postal_code not in DB
+      ORDER BY created_at DESC
       LIMIT 50
     `;
 
     const values = [
-      filters.country,
+      filters.state || filters.country, // Use state or country for state filter
       filters.city,
       filters.transactionType,
-      filters.minPrice,
-      filters.maxPrice,
+      filters.minPrice ? parseFloat(filters.minPrice) : null,
+      filters.maxPrice ? parseFloat(filters.maxPrice) : null,
       filters.propertyType,
-      filters.minBedrooms,
-      filters.minBathrooms,
+      filters.minBedrooms ? parseInt(filters.minBedrooms) : null,
+      filters.minBathrooms ? parseInt(filters.minBathrooms) : null,
       filters.area,
       filters.zipCode,
     ];
@@ -260,8 +273,9 @@ export class PropertyService {
       return properties.filter(p => p.country === country);
     }
 
-    const query = 'SELECT * FROM properties WHERE country = $1 LIMIT 50';
-    const result = await this.pool!.query(query, [country]);
+    // Since country is not in DB, return all properties for Mexico
+    const query = 'SELECT * FROM properties LIMIT 50';
+    const result = await this.pool!.query(query);
     return result.rows.map(row => this.mapDbRowToProperty(row));
   }
 
@@ -271,8 +285,8 @@ export class PropertyService {
       return properties.filter(p => p.city === city);
     }
 
-    const query = 'SELECT * FROM properties WHERE city = $1 LIMIT 50';
-    const result = await this.pool!.query(query, [city]);
+    const query = 'SELECT * FROM properties WHERE city ILIKE $1 LIMIT 50';
+    const result = await this.pool!.query(query, [`%${city}%`]);
     return result.rows.map(row => this.mapDbRowToProperty(row));
   }
 } 
