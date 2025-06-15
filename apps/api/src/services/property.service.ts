@@ -5,6 +5,39 @@ export class PropertyService {
   private pool: Pool | null = null;
   private useMockData: boolean;
 
+  private mapDbRowToProperty(row: any): Property {
+    return {
+      id: row.id,
+      source: row.source,
+      country: row.country,
+      state_province: row.state_province,
+      city: row.city,
+      neighborhood: row.neighborhood,
+      postal_code: row.postal_code,
+      address: row.address,
+      coordinates: {
+        lat: parseFloat(row.coordinates_lat),
+        lng: parseFloat(row.coordinates_lng)
+      },
+      transaction_type: row.transaction_type,
+      price: {
+        amount: parseFloat(row.price_amount),
+        currency: row.price_currency
+      },
+      property_type: row.property_type,
+      bedrooms: row.bedrooms,
+      bathrooms: row.bathrooms,
+      area_sqm: parseFloat(row.area_sqm),
+      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : null,
+      amenities: row.amenities || [],
+      images: row.images || [],
+      description: row.description,
+      contact_info: row.contact_info,
+      listing_date: row.listing_date,
+      last_updated: row.last_updated
+    };
+  }
+
   constructor() {
     // Check for DATABASE_URL first (for Railway/Render), then individual vars
     const hasDatabase = process.env.DATABASE_URL || (process.env.DB_USER && process.env.DB_HOST);
@@ -165,13 +198,14 @@ export class PropertyService {
       WHERE ($1::text IS NULL OR country = $1)
       AND ($2::text IS NULL OR city = $2)
       AND ($3::text IS NULL OR transaction_type = $3)
-      AND ($4::numeric IS NULL OR price >= $4)
-      AND ($5::numeric IS NULL OR price <= $5)
+      AND ($4::numeric IS NULL OR price_amount >= $4)
+      AND ($5::numeric IS NULL OR price_amount <= $5)
       AND ($6::text IS NULL OR property_type = $6)
       AND ($7::int IS NULL OR bedrooms >= $7)
       AND ($8::int IS NULL OR bathrooms >= $8)
       AND ($9::text IS NULL OR LOWER(neighborhood) LIKE LOWER('%' || $9 || '%'))
       AND ($10::text IS NULL OR postal_code = $10)
+      ORDER BY created_at DESC
       LIMIT 50
     `;
 
@@ -189,7 +223,7 @@ export class PropertyService {
     ];
 
     const result = await this.pool!.query(query, values);
-    return result.rows;
+    return result.rows.map(row => this.mapDbRowToProperty(row));
   }
 
   async getPropertyById(id: string): Promise<Property | null> {
@@ -200,7 +234,7 @@ export class PropertyService {
 
     const query = 'SELECT * FROM properties WHERE id = $1';
     const result = await this.pool!.query(query, [id]);
-    return result.rows[0] || null;
+    return result.rows[0] ? this.mapDbRowToProperty(result.rows[0]) : null;
   }
 
   async getPropertiesByCountry(country: string): Promise<Property[]> {
@@ -211,7 +245,7 @@ export class PropertyService {
 
     const query = 'SELECT * FROM properties WHERE country = $1 LIMIT 50';
     const result = await this.pool!.query(query, [country]);
-    return result.rows;
+    return result.rows.map(row => this.mapDbRowToProperty(row));
   }
 
   async getPropertiesByCity(city: string): Promise<Property[]> {
@@ -222,6 +256,6 @@ export class PropertyService {
 
     const query = 'SELECT * FROM properties WHERE city = $1 LIMIT 50';
     const result = await this.pool!.query(query, [city]);
-    return result.rows;
+    return result.rows.map(row => this.mapDbRowToProperty(row));
   }
 } 
