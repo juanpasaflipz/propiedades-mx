@@ -4,8 +4,10 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { Pool } from 'pg';
 import { propertyRoutes } from './routes/property.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { PropertyService } from './services/property.service';
 
 dotenv.config();
 
@@ -81,12 +83,51 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  let databaseStatus = 'unknown';
+  let tableExists = false;
+  let propertyCount = 0;
+  
+  try {
+    // Test database connection
+    const propertyService = new PropertyService();
+    if (process.env.DATABASE_URL) {
+      // Check if properties table exists
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'properties'
+        );
+      `);
+      tableExists = tableCheck.rows[0].exists;
+      
+      if (tableExists) {
+        const countResult = await pool.query('SELECT COUNT(*) FROM properties');
+        propertyCount = parseInt(countResult.rows[0].count);
+        databaseStatus = 'connected';
+      } else {
+        databaseStatus = 'table_missing';
+      }
+      await pool.end();
+    } else {
+      databaseStatus = 'not_configured';
+    }
+  } catch (error) {
+    databaseStatus = 'error: ' + error.message;
+  }
+  
   res.json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      status: databaseStatus,
+      tableExists,
+      propertyCount,
+      hasUrl: !!process.env.DATABASE_URL
+    }
   });
 });
 

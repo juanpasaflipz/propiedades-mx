@@ -155,8 +155,9 @@ export class PropertyService {
   }
 
   async searchProperties(filters: any): Promise<Property[]> {
-    if (this.useMockData) {
-      let properties = this.getMockProperties();
+    try {
+      if (this.useMockData) {
+        let properties = this.getMockProperties();
       
       // Apply filters to mock data
       if (filters.country) {
@@ -191,9 +192,10 @@ export class PropertyService {
       }
       
       return properties;
-    }
+      }
 
-    const query = `
+      console.log('Executing database query with filters:', filters);
+      const query = `
       SELECT * FROM properties
       WHERE ($1::text IS NULL OR country = $1)
       AND ($2::text IS NULL OR city = $2)
@@ -222,8 +224,13 @@ export class PropertyService {
       filters.zipCode,
     ];
 
-    const result = await this.pool!.query(query, values);
-    return result.rows.map(row => this.mapDbRowToProperty(row));
+      const result = await this.pool!.query(query, values);
+      console.log(`Database query returned ${result.rows.length} properties`);
+      return result.rows.map(row => this.mapDbRowToProperty(row));
+    } catch (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
   }
 
   async getPropertyById(id: string): Promise<Property | null> {
