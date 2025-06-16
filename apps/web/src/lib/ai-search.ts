@@ -101,11 +101,8 @@ async function callClaudeAPI(prompt: string, provider: AIProvider): Promise<stri
     body: JSON.stringify({
       model: provider.model,
       max_tokens: 1024,
+      system: SYSTEM_PROMPT,
       messages: [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT
-        },
         {
           role: 'user',
           content: prompt
