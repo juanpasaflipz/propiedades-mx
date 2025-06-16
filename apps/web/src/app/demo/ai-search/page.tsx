@@ -1,22 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
+import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
 import { FilterObject } from '@/types/ai-search';
-import { ArrowLeft } from 'lucide-react';
+import { PropertyProvider } from '@/lib/property-provider';
+import { SearchFilters } from '@/types/api';
+import { ArrowLeft, Loader2, Home } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AISearchDemo() {
   const [filters, setFilters] = useState<FilterObject | null>(null);
-  const [searchExecuted, setSearchExecuted] = useState(false);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const propertyProvider = new PropertyProvider();
 
   const handleSearch = (newFilters: FilterObject) => {
     setFilters(newFilters);
-    setSearchExecuted(true);
+    searchProperties(newFilters);
+  };
+
+  const searchProperties = async (aiFilters: FilterObject) => {
+    setLoading(true);
+    setError(null);
     
-    // Here you would normally use these filters to search properties
-    console.log('Search filters:', newFilters);
+    try {
+      // Convert AI filters to property search filters
+      const searchFilters: SearchFilters = {
+        country: 'Mexico',
+        city: aiFilters.location || undefined,
+        transactionType: aiFilters.transactionType || undefined,
+        minPrice: aiFilters.priceRange?.min,
+        maxPrice: aiFilters.priceRange?.max,
+        propertyType: aiFilters.propertyType || undefined,
+        minBedrooms: aiFilters.bedrooms || undefined,
+        minBathrooms: aiFilters.bathrooms || undefined,
+      };
+      
+      const response = await propertyProvider.searchProperties(searchFilters, 1, 50);
+      setProperties(response.listings);
+    } catch (err) {
+      console.error('Error searching properties:', err);
+      setError('Error al buscar propiedades');
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,44 +83,60 @@ export default function AISearchDemo() {
           <NaturalLanguageSearch onSearch={handleSearch} />
         </motion.div>
 
-        {/* Results Preview */}
-        {searchExecuted && filters && (
+        {/* Property Results */}
+        {filters && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-12 max-w-4xl mx-auto"
+            className="mt-12"
           >
-            <div className="glass rounded-2xl p-8">
-              <h2 className="text-2xl font-semibold mb-6">Filtros Generados para Búsqueda</h2>
-              
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">JSON para API:</h3>
-                  <pre className="text-sm overflow-x-auto">
-                    {JSON.stringify(filters, null, 2)}
-                  </pre>
-                </div>
-                
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm">
-                    Estos filtros se pueden usar directamente con tu API de búsqueda de propiedades.
-                    La IA ha interpretado tu consulta en lenguaje natural y la ha convertido en parámetros estructurados.
-                  </p>
-                </div>
-                
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => {
-                    // In a real app, this would navigate to the properties page with the filters
-                    alert('En una aplicación real, esto te llevaría a la página de propiedades con estos filtros aplicados');
-                  }}
-                >
-                  Buscar Propiedades con estos Filtros
-                </motion.button>
-              </div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold">
+                {loading ? 'Buscando propiedades...' : `${properties.length} propiedades encontradas`}
+              </h2>
             </div>
+
+            {/* Loading State */}
+            {loading && (
+              <div className="text-center py-20">
+                <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-4" />
+                <p className="text-muted-foreground">Buscando propiedades que coincidan con tu búsqueda...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="text-center py-20">
+                <p className="text-destructive">{error}</p>
+              </div>
+            )}
+
+            {/* Property Grid */}
+            {!loading && !error && properties.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {properties.map((property, index) => (
+                  <motion.div
+                    key={property.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <ModernPropertyCard {...property} />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* No Results */}
+            {!loading && !error && properties.length === 0 && (
+              <div className="text-center py-20">
+                <Home className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No se encontraron propiedades</h3>
+                <p className="text-muted-foreground">
+                  Intenta con una búsqueda diferente o ajusta los criterios
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
 

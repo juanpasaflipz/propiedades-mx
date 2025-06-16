@@ -113,57 +113,39 @@ export function NaturalLanguageSearch({ onSearch, className }: NaturalLanguageSe
         )}
       </AnimatePresence>
 
-      {/* Parsed filters display */}
+      {/* Simplified filter display - only show active filters as chips */}
       <AnimatePresence>
         {showFilters && lastFilters && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="mt-6 p-6 rounded-2xl bg-muted/50 backdrop-blur-sm"
+            exit={{ opacity: 0, y: 10 }}
+            className="mt-4 flex flex-wrap gap-2"
           >
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              Filtros detectados:
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {lastFilters.location && (
-                <FilterChip label="Ubicación" value={lastFilters.location} />
-              )}
-              {lastFilters.propertyType && (
-                <FilterChip label="Tipo" value={getPropertyTypeLabel(lastFilters.propertyType)} />
-              )}
-              {lastFilters.bedrooms && (
-                <FilterChip label="Recámaras" value={`${lastFilters.bedrooms}`} />
-              )}
-              {lastFilters.bathrooms && (
-                <FilterChip label="Baños" value={`${lastFilters.bathrooms}`} />
-              )}
-              {lastFilters.transactionType && (
-                <FilterChip label="Operación" value={lastFilters.transactionType === 'rent' ? 'Renta' : 'Venta'} />
-              )}
-              {lastFilters.priceRange && (
-                <FilterChip 
-                  label="Precio" 
-                  value={formatPriceRange(lastFilters.priceRange)} 
-                />
-              )}
-              {lastFilters.features && lastFilters.features.length > 0 && (
-                <div className="col-span-2 md:col-span-3">
-                  <p className="text-xs text-muted-foreground mb-1">Características:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {lastFilters.features.map((feature, index) => (
-                      <span
-                        key={index}
-                        className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary"
-                      >
-                        {getFeatureLabel(feature)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {lastFilters.location && (
+              <FilterTag label={lastFilters.location} icon="📍" />
+            )}
+            {lastFilters.propertyType && (
+              <FilterTag label={getPropertyTypeLabel(lastFilters.propertyType)} icon="🏠" />
+            )}
+            {lastFilters.bedrooms && (
+              <FilterTag label={`${lastFilters.bedrooms} recámaras`} icon="🛏️" />
+            )}
+            {lastFilters.bathrooms && (
+              <FilterTag label={`${lastFilters.bathrooms} baños`} icon="🚿" />
+            )}
+            {lastFilters.transactionType && (
+              <FilterTag 
+                label={lastFilters.transactionType === 'rent' ? 'Renta' : 'Venta'} 
+                icon={lastFilters.transactionType === 'rent' ? '🔑' : '🏷️'} 
+              />
+            )}
+            {lastFilters.priceRange && (
+              <FilterTag label={formatPriceRange(lastFilters.priceRange)} icon="💰" />
+            )}
+            {lastFilters.features?.map((feature, index) => (
+              <FilterTag key={index} label={getFeatureLabel(feature)} icon="✨" />
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -171,12 +153,16 @@ export function NaturalLanguageSearch({ onSearch, className }: NaturalLanguageSe
   );
 }
 
-function FilterChip({ label, value }: { label: string; value: string }) {
+function FilterTag({ label, icon }: { label: string; icon: string }) {
   return (
-    <div>
-      <p className="text-xs text-muted-foreground mb-1">{label}:</p>
-      <p className="text-sm font-medium">{value}</p>
-    </div>
+    <motion.span
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-sm"
+    >
+      <span>{icon}</span>
+      <span>{label}</span>
+    </motion.span>
   );
 }
 
