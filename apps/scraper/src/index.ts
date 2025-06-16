@@ -7,8 +7,7 @@ import { DatabaseConfig } from '@aggregator/types';
 dotenv.config();
 
 // Import scrapers
-import { MercadoLibreScraper } from './scrapers/mercadolibre-scraper';
-import { PulppoScraper } from './scrapers/pulppo-scraper';
+import { ScrapeDoScraper } from './scrapers/scrapedo-scraper';
 
 // Initialize database
 const dbConfig: DatabaseConfig = {
@@ -23,46 +22,40 @@ const dbConfig: DatabaseConfig = {
 initializeDatabase(dbConfig);
 
 // Scraping functions
-async function runMercadoLibreScraper() {
-  console.log('Starting MercadoLibre scraper...');
+async function runScrapeDoScraper() {
+  console.log('Starting Scrape.do scraper...');
   try {
-    const scraper = new MercadoLibreScraper();
+    const scraper = new ScrapeDoScraper();
+    
+    // Test connection first
+    const connected = await scraper.testConnection();
+    if (!connected) {
+      console.error('Failed to connect to Scrape.do API. Please check your API key.');
+      return;
+    }
+    
     await scraper.scrape();
-    console.log('MercadoLibre scraper completed successfully');
+    console.log('Scrape.do scraper completed successfully');
   } catch (error) {
-    console.error('MercadoLibre scraper failed:', error);
-  }
-}
-
-async function runPulppoScraper() {
-  console.log('Starting Pulppo scraper...');
-  try {
-    const scraper = new PulppoScraper();
-    await scraper.scrape();
-    console.log('Pulppo scraper completed successfully');
-  } catch (error) {
-    console.error('Pulppo scraper failed:', error);
+    console.error('Scrape.do scraper failed:', error);
   }
 }
 
 async function runAllScrapers() {
-  console.log('Running all scrapers...');
-  await Promise.allSettled([
-    runMercadoLibreScraper(),
-    runPulppoScraper(),
-  ]);
-  console.log('All scrapers completed');
+  console.log('Running Scrape.do scraper...');
+  await runScrapeDoScraper();
+  console.log('Scraper completed');
 }
 
 // Schedule scrapers
 if (process.env.ENABLE_SCHEDULED_SCRAPING === 'true') {
-  // Run MercadoLibre scraper every 6 hours
-  cron.schedule('0 */6 * * *', runMercadoLibreScraper);
+  // Run Scrape.do scraper every 4 hours
+  cron.schedule('0 */4 * * *', runScrapeDoScraper);
   
-  // Run Pulppo scraper every 8 hours
-  cron.schedule('0 */8 * * *', runPulppoScraper);
+  console.log('Scheduled scraping enabled - running every 4 hours');
   
-  console.log('Scheduled scraping enabled');
+  // Also run immediately on startup
+  runScrapeDoScraper();
 } else {
   console.log('Scheduled scraping disabled');
 }
@@ -75,8 +68,7 @@ process.on('SIGINT', async () => {
 
 // Export for manual execution
 export {
-  runMercadoLibreScraper,
-  runPulppoScraper,
+  runScrapeDoScraper,
   runAllScrapers,
 };
 
@@ -85,18 +77,20 @@ if (require.main === module) {
   const scraper = process.argv[2];
   
   switch (scraper) {
-    case 'mercadolibre':
-      runMercadoLibreScraper();
+    case 'scrapedo':
+      runScrapeDoScraper();
       break;
-    case 'pulppo':
-      runPulppoScraper();
+    case 'test':
+      // Just test the connection
+      const testScraper = new ScrapeDoScraper();
+      testScraper.testConnection();
       break;
     case 'all':
       runAllScrapers();
       break;
     default:
-      console.log('Usage: npm run dev [mercadolibre|pulppo|all]');
-      console.log('Running all scrapers by default...');
-      runAllScrapers();
+      console.log('Usage: npm run dev [scrapedo|test|all]');
+      console.log('Running Scrape.do scraper by default...');
+      runScrapeDoScraper();
   }
 }
