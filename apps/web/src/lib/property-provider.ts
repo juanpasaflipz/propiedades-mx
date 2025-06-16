@@ -19,10 +19,9 @@ export class PropertyProvider {
     }
 
     try {
-      // Try multiple providers in order of preference (MercadoLibre removed)
+      // Try backend API first, then fall back to mock data
       const providers = [
         () => this.searchBackendAPI(filters, page, limit),
-        () => this.searchEasyBroker(filters, page, limit),
         () => this.generateMockData(filters, page, limit),
       ];
 
@@ -280,10 +279,7 @@ export class PropertyProvider {
         title: propertyTitles[titleIndex],
         price: priceBase,
         currency: 'USD',
-        location: {
-          city: filters.city || 'Mexico City',
-          country: filters.country || 'Mexico',
-        },
+        location: `${filters.city || 'Mexico City'}, ${filters.country || 'Mexico'}`,
         propertyType: filters.propertyType || 'house',
         transactionType: filters.transactionType || 'sale',
         bedrooms: Math.max(filters.minBedrooms || 1, bedroomBase),

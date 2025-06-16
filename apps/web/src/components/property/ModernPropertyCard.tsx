@@ -10,7 +10,7 @@ interface PropertyCardProps {
   id: string | number;
   title: string;
   price: number;
-  location: string;
+  location: string | { city: string; country: string; address?: string };
   bedrooms: number;
   bathrooms: number;
   area?: number;
@@ -169,7 +169,11 @@ export function ModernPropertyCard({
           className="flex items-center gap-1 text-muted-foreground mb-4"
         >
           <MapPin className="w-4 h-4" />
-          <span className="text-sm">{location}</span>
+          <span className="text-sm">
+            {typeof location === 'string' 
+              ? location 
+              : `${location.city}, ${location.country}`}
+          </span>
         </motion.div>
 
         {/* Features */}
