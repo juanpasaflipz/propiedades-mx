@@ -1,11 +1,11 @@
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-interface ScrapeDoProperty {
-  id: number;
+interface Property {
   external_id: string;
   title: string;
   price: string;
@@ -24,8 +24,8 @@ interface ScrapeDoProperty {
 
 export class ScrapeDoScraper {
   private pool: Pool;
-  private apiKey: string;
-  private apiUrl: string;
+  private token: string;
+  private apiUrl: string = 'http://api.scrape.do';
 
   constructor() {
     // Initialize database connection
@@ -45,35 +45,51 @@ export class ScrapeDoScraper {
       });
     }
 
-    this.apiKey = process.env.SCRAPEDO_API_KEY || '';
-    this.apiUrl = process.env.SCRAPEDO_API_URL || 'https://api.scrape.do';
+    this.token = process.env.SCRAPEDO_TOKEN || process.env.SCRAPEDO_API_KEY || '';
     
-    if (!this.apiKey) {
-      console.warn('SCRAPEDO_API_KEY not configured');
+    if (!this.token) {
+      console.warn('SCRAPEDO_TOKEN not configured');
     }
   }
 
   async scrape(): Promise<void> {
     console.log('Starting Scrape.do scraper...');
     
-    if (!this.apiKey) {
-      console.error('Scrape.do API key not configured. Set SCRAPEDO_API_KEY environment variable.');
+    if (!this.token) {
+      console.error('Scrape.do token not configured. Set SCRAPEDO_TOKEN environment variable.');
       return;
     }
 
     try {
-      // Fetch properties from Scrape.do API
-      const properties = await this.fetchPropertiesFromScrapeDo();
-      
-      if (properties.length === 0) {
-        console.log('No properties fetched from Scrape.do');
+      // Scrape multiple cities from MercadoLibre
+      const cities = [
+        { name: 'mexico-city', url: 'distrito-federal' },
+        { name: 'guadalajara', url: 'jalisco/guadalajara' },
+        { name: 'monterrey', url: 'nuevo-leon/monterrey' },
+        { name: 'puebla', url: 'puebla/puebla' },
+        { name: 'cancun', url: 'quintana-roo/benito-juarez' }
+      ];
+
+      let allProperties: Property[] = [];
+
+      for (const city of cities) {
+        console.log(`Scraping properties in ${city.name}...`);
+        const properties = await this.scrapeMercadoLibre(city.url);
+        allProperties = allProperties.concat(properties);
+        
+        // Add delay between requests to be respectful
+        await this.delay(2000);
+      }
+
+      if (allProperties.length === 0) {
+        console.log('No properties scraped');
         return;
       }
 
-      console.log(`Fetched ${properties.length} properties from Scrape.do`);
+      console.log(`Total properties scraped: ${allProperties.length}`);
       
       // Save properties to database
-      await this.savePropertiesToDatabase(properties);
+      await this.savePropertiesToDatabase(allProperties);
       
       console.log('Scrape.do scraper completed successfully');
     } catch (error) {
@@ -84,39 +100,171 @@ export class ScrapeDoScraper {
     }
   }
 
-  private async fetchPropertiesFromScrapeDo(): Promise<ScrapeDoProperty[]> {
+  private async scrapeMercadoLibre(cityPath: string): Promise<Property[]> {
     try {
-      console.log('Fetching properties from Scrape.do API...');
+      const targetUrl = `https://inmuebles.mercadolibre.com.mx/venta/${cityPath}/`;
+      const encodedUrl = encodeURIComponent(targetUrl);
+      const scrapeDoUrl = `${this.apiUrl}/?token=${this.token}&url=${encodedUrl}&render=true`;
       
-      // Make request to Scrape.do API
-      const response = await axios.get(`${this.apiUrl}/properties`, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Accept': 'application/json'
-        },
-        params: {
-          country: 'Mexico',
-          limit: 1000 // Adjust based on your needs
-        }
+      console.log(`Scraping URL: ${targetUrl}`);
+      
+      const response = await axios.get(scrapeDoUrl, {
+        timeout: 60000 // 60 second timeout
       });
 
-      if (response.data && Array.isArray(response.data.properties)) {
-        return response.data.properties;
+      if (response.status !== 200) {
+        console.error(`Failed to scrape ${targetUrl}: ${response.status}`);
+        return [];
       }
 
-      console.warn('Unexpected response format from Scrape.do:', response.data);
-      return [];
+      // Parse the HTML
+      return this.parseMercadoLibreHTML(response.data);
     } catch (error: any) {
-      if (error.response) {
-        console.error('Scrape.do API error:', error.response.status, error.response.data);
-      } else {
-        console.error('Error fetching from Scrape.do:', error.message);
-      }
-      throw error;
+      console.error(`Error scraping MercadoLibre for ${cityPath}:`, error.message);
+      return [];
     }
   }
 
-  private async savePropertiesToDatabase(properties: ScrapeDoProperty[]): Promise<void> {
+  private parseMercadoLibreHTML(html: string): Property[] {
+    const $ = cheerio.load(html);
+    const properties: Property[] = [];
+    let propertyCount = 0;
+
+    // MercadoLibre uses different selectors, let's try multiple
+    const selectors = [
+      'li.ui-search-layout__item',
+      'li[class*="results-item"]',
+      'div.ui-search-result__wrapper',
+      'article.ui-search-result'
+    ];
+
+    let itemsFound = false;
+    for (const selector of selectors) {
+      const items = $(selector);
+      if (items.length > 0) {
+        console.log(`Found ${items.length} items using selector: ${selector}`);
+        itemsFound = true;
+        
+        items.each((_, element) => {
+          try {
+            const property = this.extractPropertyFromElement($, element);
+            if (property) {
+              properties.push(property);
+              propertyCount++;
+            }
+          } catch (err) {
+            console.error('Error parsing property:', err);
+          }
+        });
+        break;
+      }
+    }
+
+    if (!itemsFound) {
+      console.log('No property items found. Page might have different structure.');
+    }
+
+    console.log(`Parsed ${properties.length} properties`);
+    return properties;
+  }
+
+  private extractPropertyFromElement($: cheerio.CheerioAPI, element: cheerio.Element): Property | null {
+    const $el = $(element);
+    
+    // Extract title
+    const title = $el.find('.ui-search-item__title, .ui-search-result__content-title, h2').first().text().trim();
+    if (!title) return null;
+
+    // Extract link
+    const linkElement = $el.find('a[href*="/MLM-"]').first();
+    const href = linkElement.attr('href') || '';
+    
+    // Extract ID from URL
+    const idMatch = href.match(/MLM-(\d+)/);
+    const externalId = idMatch ? `MLM-${idMatch[1]}` : `ml-${Date.now()}`;
+    
+    // Extract price
+    const priceText = $el.find('.price-tag-text-sr-only, .andes-money-amount__fraction, .price__fraction').first().text().trim();
+    const priceMatch = priceText.match(/[\d,]+/);
+    const price = priceMatch ? priceMatch[0].replace(/,/g, '') : '0';
+    
+    // Extract location
+    const location = $el.find('.ui-search-item__location, .ui-search-result__content-location').text().trim() || 'Mexico';
+    
+    // Extract city and state from location
+    const locationParts = location.split(',').map(p => p.trim());
+    const city = locationParts[0] || 'Unknown';
+    const state = locationParts[1] || 'Mexico';
+    
+    // Extract attributes
+    const attributes = $el.find('.ui-search-item__attributes li, .ui-search-result__content-attributes li').map((_, attr) => 
+      $(attr).text().trim()
+    ).get();
+    
+    let size = '0';
+    let bedrooms = 0;
+    let bathrooms = 0;
+    
+    attributes.forEach(attr => {
+      // Size in m²
+      const sizeMatch = attr.match(/(\d+)\s*m²/);
+      if (sizeMatch) {
+        size = sizeMatch[1];
+      }
+      
+      // Bedrooms
+      if (attr.toLowerCase().includes('recámara') || attr.toLowerCase().includes('dormitorio')) {
+        const numMatch = attr.match(/(\d+)/);
+        if (numMatch) {
+          bedrooms = parseInt(numMatch[1]);
+        }
+      }
+      
+      // Bathrooms
+      if (attr.toLowerCase().includes('baño')) {
+        const numMatch = attr.match(/(\d+)/);
+        if (numMatch) {
+          bathrooms = parseInt(numMatch[1]);
+        }
+      }
+    });
+    
+    // Determine property type
+    let propertyType = 'Casa';
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('departamento') || titleLower.includes('depto')) {
+      propertyType = 'Departamento';
+    } else if (titleLower.includes('terreno')) {
+      propertyType = 'Terreno';
+    } else if (titleLower.includes('oficina')) {
+      propertyType = 'Oficina';
+    } else if (titleLower.includes('local')) {
+      propertyType = 'Local';
+    }
+    
+    return {
+      external_id: externalId,
+      title,
+      price,
+      currency: 'MXN',
+      location,
+      city,
+      state,
+      bedrooms,
+      bathrooms,
+      size,
+      property_type: propertyType,
+      link: href,
+      description: attributes.join(' • ') || title,
+      source: 'mercadolibre'
+    };
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async savePropertiesToDatabase(properties: Property[]): Promise<void> {
     console.log(`Saving ${properties.length} properties to database...`);
     
     const client = await this.pool.connect();
@@ -221,16 +369,26 @@ export class ScrapeDoScraper {
 
   async testConnection(): Promise<boolean> {
     try {
-      const response = await axios.get(`${this.apiUrl}/health`, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
+      // Test with a simple httpbin request
+      const testUrl = encodeURIComponent('https://httpbin.org/get');
+      const scrapeDoUrl = `${this.apiUrl}/?token=${this.token}&url=${testUrl}`;
+      
+      console.log('Testing Scrape.do connection...');
+      const response = await axios.get(scrapeDoUrl, {
+        timeout: 30000
       });
       
-      console.log('Scrape.do API connection successful:', response.data);
-      return true;
+      if (response.status === 200) {
+        console.log('Scrape.do connection successful');
+        return true;
+      }
+      
+      return false;
     } catch (error: any) {
-      console.error('Scrape.do API connection failed:', error.response?.data || error.message);
+      console.error('Scrape.do connection failed:', error.message);
+      if (error.response?.status === 401) {
+        console.error('Authentication failed. Check your SCRAPEDO_TOKEN.');
+      }
       return false;
     }
   }
