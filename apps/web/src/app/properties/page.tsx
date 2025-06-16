@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Filter, X, ChevronDown, Home, Loader2 } from 'lucide-react';
+import { Search, MapPin, Filter, X, ChevronDown, Home, Loader2, Sparkles } from 'lucide-react';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
+import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { cn } from '@/lib/utils';
 import { PropertyProvider } from '@/lib/property-provider';
 import { SearchFilters } from '@/types/api';
+import { FilterObject } from '@/types/ai-search';
 
 // Mock data for demonstration
 const mockProperties = [
@@ -109,6 +111,7 @@ export default function PropertiesPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState<'traditional' | 'ai'>('traditional');
 
   // Create property provider instance
   const propertyProvider = new PropertyProvider();
@@ -171,6 +174,23 @@ export default function PropertiesPage() {
     fetchProperties();
   }, [locationFilter, propertyType, transactionType, sortBy]);
 
+  // Handle AI search
+  const handleAISearch = async (aiFilters: FilterObject) => {
+    // Reset traditional filters
+    setSearchQuery('');
+    setLocationFilter(aiFilters.location || '');
+    setPropertyType(aiFilters.propertyType ? 
+      aiFilters.propertyType.charAt(0).toUpperCase() + aiFilters.propertyType.slice(1) : 
+      'All'
+    );
+    setTransactionType(aiFilters.transactionType ? 
+      aiFilters.transactionType.charAt(0).toUpperCase() + aiFilters.transactionType.slice(1) : 
+      'All'
+    );
+    
+    // The useEffect will trigger and search with the new filters
+  };
+
   return (
     <div className="min-h-screen">
       {/* Header Section */}
@@ -183,53 +203,96 @@ export default function PropertiesPage() {
             className="text-center mb-12"
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="text-gradient">Browse Properties</span>
+              <span className="text-gradient">Buscar Propiedades</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Find your perfect property from our extensive collection
+              Encuentra la propiedad perfecta en nuestra amplia colección
             </p>
+          </motion.div>
+
+          {/* Search Mode Toggle */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="max-w-4xl mx-auto mb-6"
+          >
+            <div className="flex justify-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSearchMode('traditional')}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-medium transition-all",
+                  searchMode === 'traditional' 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                <Search className="w-4 h-4 inline mr-2" />
+                Búsqueda Tradicional
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSearchMode('ai')}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-medium transition-all",
+                  searchMode === 'ai' 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-muted hover:bg-muted/80"
+                )}
+              >
+                <Sparkles className="w-4 h-4 inline mr-2" />
+                Búsqueda con IA
+              </motion.button>
+            </div>
           </motion.div>
 
           {/* Search Bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.2 }}
             className="max-w-4xl mx-auto"
           >
-            <div className="glass rounded-2xl p-2 shadow-xl">
-              <div className="flex flex-col md:flex-row gap-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search properties..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  />
+            {searchMode === 'ai' ? (
+              <NaturalLanguageSearch onSearch={handleAISearch} />
+            ) : (
+              <div className="glass rounded-2xl p-2 shadow-xl">
+                <div className="flex flex-col md:flex-row gap-2">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Buscar propiedades..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex-1 relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Ubicación..."
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="px-6 py-4 bg-primary/10 text-primary rounded-xl font-semibold flex items-center gap-2 hover:bg-primary/20 transition-colors"
+                  >
+                    <Filter className="w-5 h-5" />
+                    <span>Filtros</span>
+                  </motion.button>
                 </div>
-                <div className="flex-1 relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Location..."
-                    value={locationFilter}
-                    onChange={(e) => setLocationFilter(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  />
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="px-6 py-4 bg-primary/10 text-primary rounded-xl font-semibold flex items-center gap-2 hover:bg-primary/20 transition-colors"
-                >
-                  <Filter className="w-5 h-5" />
-                  <span>Filters</span>
-                </motion.button>
               </div>
-            </div>
+            )}
           </motion.div>
         </div>
       </section>

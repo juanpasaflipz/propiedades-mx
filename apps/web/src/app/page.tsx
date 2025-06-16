@@ -6,10 +6,14 @@ import { Search, MapPin, Home, TrendingUp, Sparkles, ChevronDown, Building, Bed,
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
+import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
+import { FilterObject } from '@/types/ai-search';
+import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
+  const [searchMode, setSearchMode] = useState<'traditional' | 'ai'>('ai');
   const router = useRouter();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -18,6 +22,19 @@ export default function HomePage() {
     if (searchQuery) params.append('q', searchQuery);
     if (location) params.append('location', location);
     router.push(`/properties?${params.toString()}`);
+  };
+
+  const handleAISearch = (filters: FilterObject) => {
+    const params = new URLSearchParams();
+    if (filters.location) params.append('location', filters.location);
+    if (filters.propertyType) params.append('propertyType', filters.propertyType);
+    if (filters.transactionType) params.append('transactionType', filters.transactionType);
+    if (filters.bedrooms) params.append('minBedrooms', filters.bedrooms.toString());
+    if (filters.bathrooms) params.append('minBathrooms', filters.bathrooms.toString());
+    if (filters.priceRange?.min) params.append('minPrice', filters.priceRange.min.toString());
+    if (filters.priceRange?.max) params.append('maxPrice', filters.priceRange.max.toString());
+    
+    router.push(`/properties?${params.toString()}&aiSearch=true`);
   };
 
   const popularCities = [
@@ -218,47 +235,89 @@ export default function HomePage() {
               Your dream home is just a click away.
             </p>
 
+            {/* Search Mode Toggle */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex justify-center gap-2 mb-6"
+            >
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSearchMode('ai')}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                  searchMode === 'ai' 
+                    ? "bg-white/20 backdrop-blur-sm text-white" 
+                    : "bg-white/10 backdrop-blur-sm text-white/70 hover:text-white"
+                )}
+              >
+                <Sparkles className="w-4 h-4 inline mr-2" />
+                Búsqueda Inteligente
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSearchMode('traditional')}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                  searchMode === 'traditional' 
+                    ? "bg-white/20 backdrop-blur-sm text-white" 
+                    : "bg-white/10 backdrop-blur-sm text-white/70 hover:text-white"
+                )}
+              >
+                <Search className="w-4 h-4 inline mr-2" />
+                Búsqueda Clásica
+              </motion.button>
+            </motion.div>
+
             {/* Search Form */}
-            <motion.form
-              onSubmit={handleSearch}
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="relative max-w-3xl mx-auto"
             >
-              <div className="glass rounded-2xl p-2 shadow-2xl">
-                <div className="flex flex-col md:flex-row gap-2">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Search by property type, features..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
+              {searchMode === 'ai' ? (
+                <NaturalLanguageSearch onSearch={handleAISearch} className="w-full" />
+              ) : (
+                <form onSubmit={handleSearch}>
+                  <div className="glass rounded-2xl p-2 shadow-2xl">
+                    <div className="flex flex-col md:flex-row gap-2">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por tipo de propiedad..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                        />
+                      </div>
+                      <div className="flex-1 relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Ubicación o ciudad..."
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                        />
+                      </div>
+                      <motion.button
+                        type="submit"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+                      >
+                        Buscar
+                      </motion.button>
+                    </div>
                   </div>
-                  <div className="flex-1 relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Location or city..."
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-                  <motion.button
-                    type="submit"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
-                  >
-                    Search Properties
-                  </motion.button>
-                </div>
-              </div>
-            </motion.form>
+                </form>
+              )}
+            </motion.div>
 
             {/* Quick Stats */}
             <motion.div
