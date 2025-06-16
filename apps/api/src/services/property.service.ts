@@ -50,7 +50,7 @@ export class PropertyService {
         // Use connection string (Railway, Render, etc.)
         this.pool = new Pool({
           connectionString: process.env.DATABASE_URL,
-          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+          ssl: { rejectUnauthorized: false }
         });
         
         // Test the connection

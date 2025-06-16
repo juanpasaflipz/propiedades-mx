@@ -5,15 +5,18 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
+
+// Load environment variables first, before importing routes
+dotenv.config();
+
 import { propertyRoutes } from './routes/property.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { PropertyService } from './services/property.service';
 
-dotenv.config();
-
 const app = express();
 const port = parseInt(process.env.PORT || '3003', 10);
 console.log('Environment PORT:', process.env.PORT);
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
 console.log('Using port:', port);
 
 // Security middleware
