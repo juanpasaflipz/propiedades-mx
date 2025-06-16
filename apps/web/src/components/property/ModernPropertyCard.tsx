@@ -84,7 +84,7 @@ export function ModernPropertyCard({
                 : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
             )}
           >
-            {transactionType === 'sale' ? 'FOR SALE' : 'FOR RENT'}
+            {transactionType === 'sale' ? 'EN VENTA' : 'EN RENTA'}
           </motion.div>
         </div>
 
@@ -130,7 +130,7 @@ export function ModernPropertyCard({
               className="glass px-4 py-2 rounded-lg flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <Eye className="w-4 h-4" />
-              <span className="text-sm font-medium">View Details</span>
+              <span className="text-sm font-medium">Ver Detalles</span>
             </motion.div>
           </div>
         </Link>
@@ -147,7 +147,7 @@ export function ModernPropertyCard({
         >
           <span className="text-3xl font-bold text-gradient">{formattedPrice}</span>
           {transactionType === 'rent' && (
-            <span className="text-muted-foreground text-sm">/month</span>
+            <span className="text-muted-foreground text-sm">/mes</span>
           )}
         </motion.div>
 
@@ -210,7 +210,7 @@ export function ModernPropertyCard({
             <div className="relative w-full h-full">
               <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full animate-pulse-glow" />
               <div className="absolute inset-2 bg-background rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">HOT</span>
+                <span className="text-xs font-bold text-primary">NUEVO</span>
               </div>
             </div>
           </motion.div>

@@ -11,10 +11,13 @@ export class PropertyProvider {
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
   async searchProperties(filters: SearchFilters, page: number, limit: number): Promise<SearchResponse> {
+    console.log('PropertyProvider.searchProperties called with filters:', filters);
+    
     const cacheKey = this.getCacheKey(filters, page, limit);
     const cached = this.getFromCache(cacheKey);
     
     if (cached) {
+      console.log('Returning cached results for key:', cacheKey);
       return cached;
     }
 
@@ -246,56 +249,87 @@ export class PropertyProvider {
   }
 
   private generateMockData(filters: SearchFilters, page: number, limit: number): SearchResponse {
-    const total = 50;
-    const startIndex = (page - 1) * limit;
-    const endIndex = Math.min(startIndex + limit, total);
+    // Generate varied mock properties
+    const allProperties: PropertyListing[] = [];
     
-    const listings: PropertyListing[] = [];
-    
-    // More realistic property titles
-    const propertyTitles = [
-      'Luxury Penthouse with Ocean Views',
-      'Modern Downtown Loft',
-      'Colonial House in Historic District',
-      'Beachfront Villa with Private Pool',
-      'Mountain Retreat with Panoramic Views',
-      'Garden Apartment in Prime Location',
-      'Executive Suite in Business District',
-      'Family Home with Large Backyard',
-      'Contemporary Studio Near Metro',
-      'Renovated Condo in Gated Community',
+    // Define mock properties with various characteristics
+    const mockProperties = [
+      // Polanco properties
+      { title: 'Penthouse de Lujo en Polanco', location: 'Polanco, Ciudad de México', bedrooms: 3, bathrooms: 3, price: 8500000, type: 'penthouse', transaction: 'sale' as const, area: 250, imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800' },
+      { title: 'Casa Moderna en Polanco', location: 'Polanco, Ciudad de México', bedrooms: 4, bathrooms: 3, price: 45000, type: 'house', transaction: 'rent' as const, area: 320, imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800' },
+      { title: 'Departamento con Jardín en Polanco', location: 'Polanco, Ciudad de México', bedrooms: 2, bathrooms: 2, price: 35000, type: 'apartment', transaction: 'rent' as const, area: 150, imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800' },
+      { title: 'Departamento Ejecutivo en Polanco', location: 'Polanco, Ciudad de México', bedrooms: 1, bathrooms: 1, price: 28000, type: 'apartment', transaction: 'rent' as const, area: 90, imageUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800' },
+      
+      // Condesa properties
+      { title: 'Loft de Artista en Condesa', location: 'Condesa, Ciudad de México', bedrooms: 1, bathrooms: 1, price: 22000, type: 'apartment', transaction: 'rent' as const, area: 85, imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800' },
+      { title: 'Casa Colonial en Condesa', location: 'Condesa, Ciudad de México', bedrooms: 3, bathrooms: 2, price: 5200000, type: 'house', transaction: 'sale' as const, area: 280, imageUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800' },
+      { title: 'Studio Moderno en Condesa', location: 'Condesa, Ciudad de México', bedrooms: 1, bathrooms: 1, price: 18000, type: 'apartment', transaction: 'rent' as const, area: 55, imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800' },
+      { title: 'Departamento Pet-Friendly en Condesa', location: 'Condesa, Ciudad de México', bedrooms: 2, bathrooms: 2, price: 30000, type: 'apartment', transaction: 'rent' as const, area: 120, imageUrl: 'https://images.unsplash.com/photo-1565182999561-18d7dc61c393?w=800' },
+      
+      // Roma Norte properties
+      { title: 'Departamento Renovado en Roma Norte', location: 'Roma Norte, Ciudad de México', bedrooms: 2, bathrooms: 1, price: 25000, type: 'apartment', transaction: 'rent' as const, area: 100 },
+      { title: 'Penthouse con Terraza en Roma Norte', location: 'Roma Norte, Ciudad de México', bedrooms: 2, bathrooms: 2, price: 4800000, type: 'penthouse', transaction: 'sale' as const, area: 180 },
+      { title: 'Departamento Vintage en Roma Norte', location: 'Roma Norte, Ciudad de México', bedrooms: 3, bathrooms: 2, price: 38000, type: 'apartment', transaction: 'rent' as const, area: 160 },
+      
+      // Other CDMX areas
+      { title: 'Casa en Coyoacán con Jardín', location: 'Coyoacán, Ciudad de México', bedrooms: 3, bathrooms: 2, price: 7200000, type: 'house', transaction: 'sale' as const, area: 280 },
+      { title: 'Departamento en Del Valle', location: 'Del Valle, Ciudad de México', bedrooms: 2, bathrooms: 2, price: 28000, type: 'apartment', transaction: 'rent' as const, area: 110 },
+      { title: 'Oficina en Santa Fe', location: 'Santa Fe, Ciudad de México', bedrooms: 0, bathrooms: 2, price: 45000, type: 'commercial', transaction: 'rent' as const, area: 200 },
+      
+      // Beach properties
+      { title: 'Villa Frente al Mar en Cancún', location: 'Cancún, Quintana Roo', bedrooms: 5, bathrooms: 4, price: 12500000, type: 'villa', transaction: 'sale' as const, area: 450 },
+      { title: 'Condominio en Playa del Carmen', location: 'Playa del Carmen, Quintana Roo', bedrooms: 2, bathrooms: 2, price: 5800000, type: 'condo', transaction: 'sale' as const, area: 120 },
+      { title: 'Casa de Playa en Tulum', location: 'Tulum, Quintana Roo', bedrooms: 4, bathrooms: 4, price: 9500000, type: 'house', transaction: 'sale' as const, area: 380 },
+      { title: 'Departamento Vista al Mar en Puerto Vallarta', location: 'Puerto Vallarta, Jalisco', bedrooms: 3, bathrooms: 2, price: 6500000, type: 'apartment', transaction: 'sale' as const, area: 180 },
+      
+      // Other cities
+      { title: 'Casa de Montaña en Valle de Bravo', location: 'Valle de Bravo, Estado de México', bedrooms: 6, bathrooms: 5, price: 15000000, type: 'house', transaction: 'sale' as const, area: 600 },
+      { title: 'Loft en Centro de Guadalajara', location: 'Guadalajara, Jalisco', bedrooms: 1, bathrooms: 1, price: 15000, type: 'apartment', transaction: 'rent' as const, area: 70 },
+      { title: 'Casa Familiar en Monterrey', location: 'Monterrey, Nuevo León', bedrooms: 4, bathrooms: 3, price: 6800000, type: 'house', transaction: 'sale' as const, area: 350 },
+      { title: 'Casa Colonial en San Miguel de Allende', location: 'San Miguel de Allende, Guanajuato', bedrooms: 5, bathrooms: 4, price: 9200000, type: 'house', transaction: 'sale' as const, area: 420 },
+      { title: 'Departamento en Querétaro', location: 'Querétaro, Querétaro', bedrooms: 2, bathrooms: 1, price: 20000, type: 'apartment', transaction: 'rent' as const, area: 95 },
+      { title: 'Casa en Mérida Centro', location: 'Mérida, Yucatán', bedrooms: 3, bathrooms: 2, price: 4500000, type: 'house', transaction: 'sale' as const, area: 250 },
     ];
     
-    for (let i = startIndex; i < endIndex; i++) {
-      const titleIndex = i % propertyTitles.length;
-      // Use deterministic values based on index to avoid hydration mismatches
-      const priceBase = ((i * 12345) % 450000) + 50000;
-      const bedroomBase = ((i * 7) % 4) + 1;
-      const bathroomBase = ((i * 5) % 3) + 1;
-      const areaBase = ((i * 31) % 150) + 50;
+    // Generate properties with proper filtering
+    let id = 0;
+    for (const prop of mockProperties) {
+      // Apply filters
+      if (filters.city && !prop.location.toLowerCase().includes(filters.city.toLowerCase())) continue;
+      if (filters.propertyType && filters.propertyType !== 'all' && prop.type !== filters.propertyType) continue;
+      if (filters.transactionType && prop.transaction !== filters.transactionType) continue;
+      if (filters.minBedrooms && prop.bedrooms < filters.minBedrooms) continue;
+      if (filters.minBathrooms && prop.bathrooms < filters.minBathrooms) continue;
+      if (filters.minPrice && prop.price < filters.minPrice) continue;
+      if (filters.maxPrice && prop.price > filters.maxPrice) continue;
       
-      listings.push({
-        id: `mock-${i}`,
-        title: propertyTitles[titleIndex],
-        price: priceBase,
-        currency: 'USD',
-        location: `${filters.city || 'Mexico City'}, ${filters.country || 'Mexico'}`,
-        propertyType: filters.propertyType || 'house',
-        transactionType: filters.transactionType || 'sale',
-        bedrooms: Math.max(filters.minBedrooms || 1, bedroomBase),
-        bathrooms: Math.max(filters.minBathrooms || 1, bathroomBase),
-        area: areaBase,
-        imageUrl: '/placeholder-property.svg',
-        listingUrl: `https://example.com/property-${i}`,
-        description: 'A wonderful property in a great location',
+      allProperties.push({
+        id: `mock-${id++}`,
+        title: prop.title,
+        price: prop.price,
+        currency: prop.transaction === 'rent' ? 'MXN' : 'MXN',
+        location: prop.location,
+        propertyType: prop.type,
+        transactionType: prop.transaction,
+        bedrooms: prop.bedrooms,
+        bathrooms: prop.bathrooms,
+        area: prop.area,
+        imageUrl: prop.imageUrl || '/placeholder-property.svg',
+        listingUrl: `https://example.com/property-${id}`,
+        description: `Hermosa propiedad en ${prop.location}`,
       });
     }
+    
+    // Paginate results
+    const startIndex = (page - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, allProperties.length);
+    const listings = allProperties.slice(startIndex, endIndex);
 
     return {
       listings,
-      total,
+      total: allProperties.length,
       page,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(allProperties.length / limit),
     };
   }
 

@@ -91,22 +91,22 @@ const mockProperties = [
 ];
 
 const sortOptions = [
-  { value: 'price-asc', label: 'Price: Low to High' },
-  { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'area-asc', label: 'Size: Small to Large' },
-  { value: 'area-desc', label: 'Size: Large to Small' },
-  { value: 'newest', label: 'Newest First' },
+  { value: 'price-asc', label: 'Precio: Menor a Mayor' },
+  { value: 'price-desc', label: 'Precio: Mayor a Menor' },
+  { value: 'area-asc', label: 'Tamaño: Menor a Mayor' },
+  { value: 'area-desc', label: 'Tamaño: Mayor a Menor' },
+  { value: 'newest', label: 'Más Recientes' },
 ];
 
-const propertyTypes = ['All', 'House', 'Apartment', 'Condo', 'Villa', 'Penthouse'];
-const transactionTypes = ['All', 'Sale', 'Rent'];
+const propertyTypes = ['Todos', 'Casa', 'Departamento', 'Condominio', 'Villa', 'Penthouse'];
+const transactionTypes = ['Todos', 'Venta', 'Renta'];
 
 export default function PropertiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [propertyType, setPropertyType] = useState('All');
-  const [transactionType, setTransactionType] = useState('All');
+  const [propertyType, setPropertyType] = useState('Todos');
+  const [transactionType, setTransactionType] = useState('Todos');
   const [showFilters, setShowFilters] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +115,22 @@ export default function PropertiesPage() {
 
   // Create property provider instance
   const propertyProvider = new PropertyProvider();
+
+  // Map Spanish to English for API
+  const propertyTypeMap: { [key: string]: string } = {
+    'Todos': 'all',
+    'Casa': 'house',
+    'Departamento': 'apartment',
+    'Condominio': 'condo',
+    'Villa': 'villa',
+    'Penthouse': 'penthouse'
+  };
+
+  const transactionTypeMap: { [key: string]: 'sale' | 'rent' | undefined } = {
+    'Todos': undefined,
+    'Venta': 'sale',
+    'Renta': 'rent'
+  };
 
   // Fetch properties from API
   useEffect(() => {
@@ -132,12 +148,16 @@ export default function PropertiesPage() {
           filters.city = locationFilter;
         }
         
-        if (propertyType !== 'All') {
-          filters.propertyType = propertyType.toLowerCase();
+        if (propertyType !== 'Todos') {
+          const mappedType = propertyTypeMap[propertyType];
+          if (mappedType && mappedType !== 'all') {
+            filters.propertyType = mappedType;
+          }
         }
         
-        if (transactionType !== 'All') {
-          filters.transactionType = transactionType.toLowerCase() as 'sale' | 'rent';
+        const mappedTransaction = transactionTypeMap[transactionType];
+        if (mappedTransaction) {
+          filters.transactionType = mappedTransaction;
         }
         
         // Fetch from API
@@ -179,13 +199,24 @@ export default function PropertiesPage() {
     // Reset traditional filters
     setSearchQuery('');
     setLocationFilter(aiFilters.location || '');
+    
+    // Map English property types from AI to Spanish UI
+    const propertyTypeReverseMap: { [key: string]: string } = {
+      'house': 'Casa',
+      'apartment': 'Departamento',
+      'condo': 'Condominio',
+      'villa': 'Villa',
+      'penthouse': 'Penthouse'
+    };
+    
     setPropertyType(aiFilters.propertyType ? 
-      aiFilters.propertyType.charAt(0).toUpperCase() + aiFilters.propertyType.slice(1) : 
-      'All'
+      propertyTypeReverseMap[aiFilters.propertyType] || 'Todos' : 
+      'Todos'
     );
+    
     setTransactionType(aiFilters.transactionType ? 
-      aiFilters.transactionType.charAt(0).toUpperCase() + aiFilters.transactionType.slice(1) : 
-      'All'
+      (aiFilters.transactionType === 'sale' ? 'Venta' : 'Renta') : 
+      'Todos'
     );
     
     // The useEffect will trigger and search with the new filters
@@ -313,7 +344,7 @@ export default function PropertiesPage() {
                   <div className="grid md:grid-cols-3 gap-6">
                     {/* Property Type */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Property Type</label>
+                      <label className="text-sm font-medium mb-2 block">Tipo de Propiedad</label>
                       <div className="flex flex-wrap gap-2">
                         {propertyTypes.map((type) => (
                           <motion.button
@@ -336,7 +367,7 @@ export default function PropertiesPage() {
 
                     {/* Transaction Type */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Transaction Type</label>
+                      <label className="text-sm font-medium mb-2 block">Tipo de Operación</label>
                       <div className="flex gap-2">
                         {transactionTypes.map((type) => (
                           <motion.button
@@ -359,7 +390,7 @@ export default function PropertiesPage() {
 
                     {/* Sort By */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Sort By</label>
+                      <label className="text-sm font-medium mb-2 block">Ordenar por</label>
                       <DropdownMenu.Root>
                         <DropdownMenu.Trigger asChild>
                           <button className="w-full px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm font-medium flex items-center justify-between transition-colors">
@@ -402,7 +433,7 @@ export default function PropertiesPage() {
               animate={{ opacity: 1 }}
               className="text-muted-foreground"
             >
-              Found <span className="font-semibold text-foreground">{properties.length}</span> properties
+              Se encontraron <span className="font-semibold text-foreground">{properties.length}</span> propiedades
             </motion.p>
           </div>
 
@@ -414,8 +445,8 @@ export default function PropertiesPage() {
               className="text-center py-20"
             >
               <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Loading properties...</h3>
-              <p className="text-muted-foreground">Fetching the latest listings for you</p>
+              <h3 className="text-xl font-semibold mb-2">Cargando propiedades...</h3>
+              <p className="text-muted-foreground">Obteniendo las últimas propiedades para ti</p>
             </motion.div>
           )}
 
@@ -427,8 +458,8 @@ export default function PropertiesPage() {
               className="text-center py-20"
             >
               <X className="w-16 h-16 mx-auto text-destructive mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Error loading properties</h3>
-              <p className="text-muted-foreground">{error}</p>
+              <h3 className="text-xl font-semibold mb-2">Error al cargar propiedades</h3>
+              <p className="text-muted-foreground">No se pudieron cargar las propiedades. Por favor intenta de nuevo.</p>
             </motion.div>
           )}
 
@@ -464,8 +495,8 @@ export default function PropertiesPage() {
               className="text-center py-20"
             >
               <Home className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No properties found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters or search criteria</p>
+              <h3 className="text-xl font-semibold mb-2">No se encontraron propiedades</h3>
+              <p className="text-muted-foreground">Intenta ajustar tus filtros o criterios de búsqueda</p>
             </motion.div>
           )}
         </div>

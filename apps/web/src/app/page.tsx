@@ -45,16 +45,16 @@ export default function HomePage() {
   ];
 
   const features = [
-    { icon: Search, title: 'Smart Search', description: 'AI-powered search to find your perfect home' },
-    { icon: MapPin, title: 'Prime Locations', description: 'Properties in the best neighborhoods across Mexico' },
-    { icon: TrendingUp, title: 'Market Insights', description: 'Real-time pricing and market trends analysis' },
-    { icon: Sparkles, title: 'Verified Listings', description: 'All properties verified for accuracy and availability' },
+    { icon: Search, title: 'Búsqueda Inteligente', description: 'Búsqueda con IA para encontrar tu hogar perfecto' },
+    { icon: MapPin, title: 'Mejores Ubicaciones', description: 'Propiedades en los mejores barrios de México' },
+    { icon: TrendingUp, title: 'Análisis del Mercado', description: 'Precios y tendencias del mercado en tiempo real' },
+    { icon: Sparkles, title: 'Propiedades Verificadas', description: 'Todas las propiedades verificadas y disponibles' },
   ];
 
   const latestProperties = [
     {
       id: '7',
-      title: 'Studio Loft in Condesa',
+      title: 'Studio Loft en Condesa',
       price: 18000,
       location: 'Condesa, CDMX',
       bedrooms: 1,
@@ -66,26 +66,26 @@ export default function HomePage() {
     },
     {
       id: '8',
-      title: 'Garden House in Coyoacán',
+      title: 'Casa con Jardín en Coyoacán',
       price: 7200000,
       location: 'Coyoacán, CDMX',
       bedrooms: 3,
       bathrooms: 2,
       area: 280,
       imageUrl: 'https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800',
-      propertyType: 'House',
+      propertyType: 'Casa',
       transactionType: 'sale' as const,
     },
     {
       id: '9',
-      title: 'Beach House in Tulum',
+      title: 'Casa de Playa en Tulum',
       price: 9500000,
       location: 'Tulum, Quintana Roo',
       bedrooms: 4,
       bathrooms: 4,
       area: 380,
       imageUrl: 'https://images.unsplash.com/photo-1615571022219-eb45cf7faa9d?w=800',
-      propertyType: 'House',
+      propertyType: 'Casa',
       transactionType: 'sale' as const,
     },
   ];
@@ -93,7 +93,7 @@ export default function HomePage() {
   const featuredProperties = [
     {
       id: '1',
-      title: 'Luxury Penthouse with Ocean View',
+      title: 'Penthouse de Lujo con Vista al Mar',
       price: 8500000,
       location: 'Playa del Carmen',
       bedrooms: 3,
@@ -105,55 +105,55 @@ export default function HomePage() {
     },
     {
       id: '2',
-      title: 'Modern House in Polanco',
+      title: 'Casa Moderna en Polanco',
       price: 45000,
       location: 'Ciudad de México',
       bedrooms: 4,
       bathrooms: 3,
       area: 320,
       imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
-      propertyType: 'House',
+      propertyType: 'Casa',
       transactionType: 'rent' as const,
     },
     {
       id: '3',
-      title: 'Beachfront Condo',
+      title: 'Condominio Frente al Mar',
       price: 5200000,
       location: 'Cancún',
       bedrooms: 2,
       bathrooms: 2,
       area: 120,
       imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
-      propertyType: 'Condo',
+      propertyType: 'Condominio',
       transactionType: 'sale' as const,
     },
     {
       id: '4',
-      title: 'Colonial Style Home',
+      title: 'Casa Estilo Colonial',
       price: 6800000,
       location: 'San Miguel de Allende',
       bedrooms: 5,
       bathrooms: 4,
       area: 450,
       imageUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
-      propertyType: 'House',
+      propertyType: 'Casa',
       transactionType: 'sale' as const,
     },
     {
       id: '5',
-      title: 'Downtown Apartment',
+      title: 'Departamento en el Centro',
       price: 22000,
       location: 'Roma Norte, CDMX',
       bedrooms: 2,
       bathrooms: 1,
       area: 85,
       imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-      propertyType: 'Apartment',
+      propertyType: 'Departamento',
       transactionType: 'rent' as const,
     },
     {
       id: '6',
-      title: 'Luxury Villa with Pool',
+      title: 'Villa de Lujo con Alberca',
       price: 12500000,
       location: 'Nuevo Vallarta',
       bedrooms: 6,
@@ -213,14 +213,14 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6"
             >
               <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Discover your dream home in Mexico</span>
+              <span className="text-sm font-medium">Descubre tu hogar ideal en México</span>
             </motion.div>
 
             <h1 className="text-5xl md:text-7xl font-bold mb-6">
-              <span className="text-gradient">Find Your Perfect</span>
+              <span className="text-gradient">Encuentra tu Hogar</span>
               <br />
               <span className="relative">
-                Home in Mexico
+                Perfecto en México
                 <motion.div
                   className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent rounded-full"
                   initial={{ scaleX: 0 }}
@@ -231,8 +231,8 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto">
-              Browse thousands of properties across Mexico with our advanced search and real-time updates.
-              Your dream home is just a click away.
+              Explora miles de propiedades en todo México con nuestra búsqueda avanzada y actualizaciones en tiempo real.
+              Tu hogar ideal está a solo un clic de distancia.
             </p>
 
             {/* Search Mode Toggle */}
@@ -327,9 +327,9 @@ export default function HomePage() {
               className="flex flex-wrap justify-center gap-8 mt-12"
             >
               {[
-                { label: 'Active Listings', value: '50,000+' },
-                { label: 'Cities Covered', value: '120+' },
-                { label: 'Happy Customers', value: '10,000+' },
+                { label: 'Propiedades Activas', value: '50,000+' },
+                { label: 'Ciudades', value: '120+' },
+                { label: 'Clientes Satisfechos', value: '10,000+' },
               ].map((stat, index) => (
                 <div key={index} className="text-center">
                   <div className="text-3xl font-bold text-gradient">{stat.value}</div>
@@ -351,7 +351,7 @@ export default function HomePage() {
               transition={{ duration: 2, repeat: Infinity }}
               className="flex flex-col items-center gap-2 text-muted-foreground"
             >
-              <span className="text-sm">Explore More</span>
+              <span className="text-sm">Explorar Más</span>
               <ChevronDown className="w-5 h-5" />
             </motion.div>
           </motion.div>
@@ -367,8 +367,8 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-4xl font-bold mb-4">Popular Cities</h2>
-            <p className="text-muted-foreground">Discover properties in Mexico's most sought-after locations</p>
+            <h2 className="text-4xl font-bold mb-4">Ciudades Populares</h2>
+            <p className="text-muted-foreground">Descubre propiedades en las ubicaciones más buscadas de México</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -392,7 +392,7 @@ export default function HomePage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6">
                       <h3 className="text-2xl font-bold text-white mb-1">{city.name}</h3>
-                      <p className="text-white/80">{city.count} properties</p>
+                      <p className="text-white/80">{city.count} propiedades</p>
                     </div>
                     <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </motion.div>
@@ -413,8 +413,8 @@ export default function HomePage() {
             className="flex items-center justify-between mb-12"
           >
             <div>
-              <h2 className="text-4xl font-bold mb-2">Featured Properties</h2>
-              <p className="text-muted-foreground">Hand-picked properties just for you</p>
+              <h2 className="text-4xl font-bold mb-2">Propiedades Destacadas</h2>
+              <p className="text-muted-foreground">Propiedades seleccionadas especialmente para ti</p>
             </div>
             <Link href="/properties">
               <motion.button
@@ -422,7 +422,7 @@ export default function HomePage() {
                 whileTap={{ scale: 0.95 }}
                 className="hidden md:flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
               >
-                View All Properties
+                Ver Todas las Propiedades
                 <ArrowRight className="w-4 h-4" />
               </motion.button>
             </Link>
@@ -456,7 +456,7 @@ export default function HomePage() {
                 whileTap={{ scale: 0.95 }}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg"
               >
-                View All Properties
+                Ver Todas las Propiedades
                 <ArrowRight className="w-4 h-4" />
               </motion.button>
             </Link>
@@ -473,8 +473,8 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-4xl font-bold mb-4">Why Choose Us</h2>
-            <p className="text-muted-foreground">Experience the future of real estate searching</p>
+            <h2 className="text-4xl font-bold mb-4">¿Por Qué Elegirnos?</h2>
+            <p className="text-muted-foreground">Experimenta el futuro de la búsqueda inmobiliaria</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -510,8 +510,8 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h2 className="text-4xl font-bold mb-4">Latest Listings</h2>
-            <p className="text-muted-foreground">Fresh properties added daily</p>
+            <h2 className="text-4xl font-bold mb-4">Últimas Propiedades</h2>
+            <p className="text-muted-foreground">Nuevas propiedades agregadas diariamente</p>
           </motion.div>
 
           {/* Property Grid - 3 columns */}
@@ -542,9 +542,9 @@ export default function HomePage() {
           >
             <div className="absolute inset-0 bg-gradient-conic opacity-30" />
             <div className="relative z-10">
-              <h2 className="text-4xl font-bold text-white mb-4">Ready to Find Your Dream Home?</h2>
+              <h2 className="text-4xl font-bold text-white mb-4">¿Listo para Encontrar tu Hogar Ideal?</h2>
               <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-                Join thousands of happy homeowners who found their perfect property through our platform
+                Únete a miles de propietarios felices que encontraron su propiedad perfecta a través de nuestra plataforma
               </p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -552,7 +552,7 @@ export default function HomePage() {
                 onClick={() => router.push('/properties')}
                 className="px-8 py-4 bg-white text-primary rounded-xl font-semibold shadow-2xl hover:shadow-3xl transition-all"
               >
-                Start Searching Now
+                Comenzar a Buscar Ahora
               </motion.button>
             </div>
           </motion.div>
