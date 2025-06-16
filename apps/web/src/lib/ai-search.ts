@@ -6,14 +6,21 @@ const SYSTEM_PROMPT = `You are a Mexican real estate search assistant. Parse nat
 Rules:
 1. Return ONLY valid JSON, no additional text
 2. Set fields to null if not mentioned in the query
-3. Translate Spanish terms to English for consistency:
+3. Spanish number words to digits:
+   - uno/una → 1
+   - dos → 2
+   - tres → 3
+   - cuatro → 4
+   - cinco → 5
+   - seis → 6
+4. Translate Spanish terms to English for consistency:
    - casa/hogar → house
    - departamento/depa → apartment
-   - recámara/cuarto → bedroom (count)
-   - baño → bathroom (count)
+   - recámara/recamaras/cuarto/habitación → extract number for bedrooms
+   - baño/baños → extract number for bathrooms
    - jardín → garden
    - alberca/piscina → pool
-   - estacionamiento → parking
+   - estacionamiento/cochera → parking
    - mascota/perro/gato → pet-friendly
    - luz natural → natural light
    - balcón → balcony
@@ -21,10 +28,11 @@ Rules:
    - gimnasio/gym → gym
    - seguridad → security
    - amueblado → furnished
-4. For location, extract neighborhood, city, or area names
-5. For price, detect currency (MXN default, USD if mentioned)
-6. Property types: house, apartment, condo, land, office, commercial
-7. Transaction types: sale, rent (venta → sale, renta → rent)
+5. For location, extract neighborhood, city, or area names
+6. For price, detect currency (MXN default, USD if mentioned)
+7. Property types: house, apartment, condo, land, office, commercial
+8. Transaction types: sale, rent (venta → sale, renta/rentar → rent)
+9. IMPORTANT: Extract numeric values for bedrooms and bathrooms, including Spanish number words
 
 Return this exact JSON structure:
 {
@@ -45,7 +53,15 @@ export function buildFilterPrompt(userInput: string): string {
 
 Query: "${userInput}"
 
-Remember to return ONLY the JSON object with the exact structure specified.`;
+Examples:
+- "dos recámaras" → bedrooms: 2
+- "tres baños" → bathrooms: 3
+- "departamento en renta" → propertyType: "apartment", transactionType: "rent"
+
+Remember to:
+1. Extract ALL numeric values mentioned (dos = 2, tres = 3, etc.)
+2. Return ONLY the JSON object
+3. Set unmentioned fields to null`;
 }
 
 /**
@@ -287,11 +303,34 @@ function extractPriceRange(input: string): { min: number; max: number } | null {
  * Extract number for bedrooms/bathrooms
  */
 function extractNumber(input: string, keywords: string[]): number | null {
+  // Spanish number words
+  const numberWords: { [key: string]: number } = {
+    'un': 1, 'uno': 1, 'una': 1,
+    'dos': 2,
+    'tres': 3,
+    'cuatro': 4,
+    'cinco': 5,
+    'seis': 6,
+    'siete': 7,
+    'ocho': 8,
+    'nueve': 9,
+    'diez': 10
+  };
+  
   for (const keyword of keywords) {
-    const pattern = new RegExp(`(\\d+)\\s*${keyword}`, 'i');
-    const match = input.match(pattern);
-    if (match) {
-      return parseInt(match[1]);
+    // Try numeric pattern first
+    const numericPattern = new RegExp(`(\\d+)\\s*${keyword}`, 'i');
+    const numericMatch = input.match(numericPattern);
+    if (numericMatch) {
+      return parseInt(numericMatch[1]);
+    }
+    
+    // Try word pattern
+    for (const [word, value] of Object.entries(numberWords)) {
+      const wordPattern = new RegExp(`${word}\\s+${keyword}`, 'i');
+      if (input.match(wordPattern)) {
+        return value;
+      }
     }
   }
   return null;
