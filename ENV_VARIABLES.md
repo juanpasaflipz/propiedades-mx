@@ -6,6 +6,7 @@
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string for Supabase | `postgresql://postgres:password@db.xxx.supabase.co:5432/postgres` |
 | `CLAUDE_API_KEY` | Claude API key for AI search | `sk-ant-api03-...` |
+| `OPENAI_API_KEY` | OpenAI API key for search optimization | `sk-...` |
 | `FRONTEND_URL` | Frontend URL for CORS | `https://your-app.vercel.app` |
 | `NODE_ENV` | Environment mode | `production` |
 | `PORT` | Server port | `3003` |
@@ -25,6 +26,7 @@
 ```env
 DATABASE_URL=postgresql://postgres:rnj@vmc@QER8xnz1vpq@db.pfpyfxspinghdhrjalsg.supabase.co:5432/postgres
 CLAUDE_API_KEY=your-claude-api-key
+OPENAI_API_KEY=your-openai-api-key
 NODE_ENV=development
 PORT=3003
 FRONTEND_URL=http://localhost:3000

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { validateBody } from '../middleware/validation';
 import { AISearchSchema } from '../validation/schemas';
+import { getOpenAIService } from '../services/openai.service';
 
 dotenv.config();
 
@@ -64,7 +65,7 @@ async function callClaudeAPI(prompt: string): Promise<any> {
 // Parse natural language search
 router.post('/parse-search', validateBody(AISearchSchema), async (req: Request, res: Response) => {
   try {
-    const { query } = req.body;
+    const { query, provider = 'auto' } = req.body; // provider can be 'openai', 'claude', or 'auto'
     
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ 
@@ -73,26 +74,42 @@ router.post('/parse-search', validateBody(AISearchSchema), async (req: Request, 
       });
     }
 
-    // Check if Claude API is configured
-    if (!process.env.CLAUDE_API_KEY) {
-      // Fallback to basic keyword extraction
-      const filters = extractKeywords(query);
-      return res.json({ 
-        success: true, 
-        query, 
-        filters,
-        method: 'keyword'
-      });
-    }
+    let filters;
+    let method;
 
-    // Use Claude API
-    const filters = await callClaudeAPI(query);
+    // Determine which AI provider to use
+    if (provider === 'openai' || (provider === 'auto' && process.env.OPENAI_API_KEY)) {
+      try {
+        // Use OpenAI
+        const openAIService = getOpenAIService();
+        filters = await openAIService.parseSearchQuery(query);
+        method = 'openai';
+      } catch (error) {
+        console.error('OpenAI parsing failed:', error);
+        // Fall back to Claude if OpenAI fails
+        if (process.env.CLAUDE_API_KEY) {
+          filters = await callClaudeAPI(query);
+          method = 'claude_fallback';
+        } else {
+          filters = extractKeywords(query);
+          method = 'keyword_fallback';
+        }
+      }
+    } else if (provider === 'claude' || (provider === 'auto' && process.env.CLAUDE_API_KEY)) {
+      // Use Claude API
+      filters = await callClaudeAPI(query);
+      method = 'claude';
+    } else {
+      // Fallback to basic keyword extraction
+      filters = extractKeywords(query);
+      method = 'keyword';
+    }
     
     res.json({ 
       success: true, 
       query, 
       filters,
-      method: 'ai'
+      method
     });
     
   } catch (error) {
@@ -105,6 +122,43 @@ router.post('/parse-search', validateBody(AISearchSchema), async (req: Request, 
       query: req.body.query, 
       filters,
       method: 'keyword_fallback'
+    });
+  }
+});
+
+// Optimize search query endpoint (OpenAI only)
+router.post('/optimize-query', validateBody(AISearchSchema), async (req: Request, res: Response) => {
+  try {
+    const { query } = req.body;
+    
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Query parameter is required' 
+      });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'OpenAI API key not configured' 
+      });
+    }
+
+    const openAIService = getOpenAIService();
+    const optimizedQuery = await openAIService.optimizeSearchQuery(query);
+    
+    res.json({ 
+      success: true, 
+      originalQuery: query, 
+      optimizedQuery
+    });
+    
+  } catch (error) {
+    console.error('Error optimizing query:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to optimize query' 
     });
   }
 });
