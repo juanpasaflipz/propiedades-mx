@@ -106,22 +106,24 @@ export class PropertyService {
       
       const query = `
       SELECT * FROM properties
-      WHERE ($1::text IS NULL OR state = $1)
-      AND ($2::text IS NULL OR city ILIKE '%' || $2 || '%')
-      AND ($3::text IS NULL OR true) -- transaction_type not in DB
-      AND ($4::numeric IS NULL OR CAST(price AS NUMERIC) >= $4)
-      AND ($5::numeric IS NULL OR CAST(price AS NUMERIC) <= $5)
-      AND ($6::text IS NULL OR property_type ILIKE '%' || $6 || '%')
-      AND ($7::int IS NULL OR bedrooms >= $7)
-      AND ($8::int IS NULL OR bathrooms >= $8)
-      AND ($9::text IS NULL OR location ILIKE '%' || $9 || '%')
-      AND ($10::text IS NULL OR true) -- postal_code not in DB
+      WHERE ($1::text IS NULL OR country = $1)
+      AND ($2::text IS NULL OR state = $2)
+      AND ($3::text IS NULL OR city ILIKE '%' || $3 || '%')
+      AND ($4::text IS NULL OR true) -- transaction_type not in DB
+      AND ($5::numeric IS NULL OR CAST(price AS NUMERIC) >= $5)
+      AND ($6::numeric IS NULL OR CAST(price AS NUMERIC) <= $6)
+      AND ($7::text IS NULL OR property_type ILIKE '%' || $7 || '%')
+      AND ($8::int IS NULL OR bedrooms >= $8)
+      AND ($9::int IS NULL OR bathrooms >= $9)
+      AND ($10::text IS NULL OR location ILIKE '%' || $10 || '%')
+      AND ($11::text IS NULL OR true) -- postal_code not in DB
       ORDER BY created_at DESC
       LIMIT 50
     `;
 
     const values = [
-      filters.state || filters.country, // Use state or country for state filter
+      filters.country,
+      filters.state,
       filters.city,
       filters.transactionType,
       filters.minPrice ? parseFloat(filters.minPrice) : null,
