@@ -25,6 +25,7 @@ import {
   Building,
   Info
 } from 'lucide-react';
+import { useFavoritesContext } from '@/contexts/FavoritesContext';
 
 interface PropertyDetails {
   id: string;
@@ -54,8 +55,8 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState<PropertyDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavoritesContext();
 
   useEffect(() => {
     const fetchPropertyDetails = async () => {
@@ -169,9 +170,15 @@ export default function PropertyDetailPage() {
                   <Button
                     size="icon"
                     variant="secondary"
-                    onClick={() => setIsFavorite(!isFavorite)}
+                    onClick={() => property && toggleFavorite({
+                      id: property.id,
+                      title: propertyTitle,
+                      price: property.price.amount,
+                      location: `${property.city}, ${property.state_province}`,
+                      imageUrl: '/placeholder-property.svg'
+                    })}
                   >
-                    <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                    <Heart className={`h-4 w-4 ${property && isFavorite(property.id) ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
                   <Button
                     size="icon"

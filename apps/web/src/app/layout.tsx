@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navigation } from "@/components/layout/NavigationWithAuth";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,10 +31,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Navigation />
-            <main className="pt-16">
-              {children}
-            </main>
+            <FavoritesProvider>
+              <Navigation />
+              <main className="pt-16">
+                {children}
+              </main>
+            </FavoritesProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

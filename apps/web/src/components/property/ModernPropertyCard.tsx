@@ -5,6 +5,7 @@ import { Heart, MapPin, Bed, Bath, Square, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useFavoritesContext } from '@/contexts/FavoritesContext';
 
 interface PropertyCardProps {
   id: string | number;
@@ -33,14 +34,33 @@ export function ModernPropertyCard({
   transactionType,
   featured = false,
 }: PropertyCardProps) {
-  const [isFavorite, setIsFavorite] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavoritesContext();
+  
+  const propertyId = String(id);
+  const isPropertyFavorite = isFavorite(propertyId);
+  
+  const locationString = typeof location === 'string' 
+    ? location 
+    : `${location.city}, ${location.country}`;
 
   const formattedPrice = new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
     minimumFractionDigits: 0,
   }).format(price);
+  
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite({
+      id: propertyId,
+      title,
+      price,
+      location: locationString,
+      imageUrl
+    });
+  };
 
   return (
     <motion.article
@@ -92,16 +112,13 @@ export function ModernPropertyCard({
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
-          onClick={(e) => {
-            e.preventDefault();
-            setIsFavorite(!isFavorite);
-          }}
+          onClick={handleFavoriteClick}
           className="absolute bottom-4 right-4 z-20 p-3 rounded-full glass backdrop-blur-md"
         >
           <Heart
             className={cn(
               'w-5 h-5 transition-all',
-              isFavorite ? 'fill-red-500 text-red-500' : 'text-white'
+              isPropertyFavorite ? 'fill-red-500 text-red-500' : 'text-white'
             )}
           />
         </motion.button>

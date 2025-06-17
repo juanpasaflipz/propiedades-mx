@@ -12,6 +12,7 @@ import { useTheme } from 'next-themes';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFavoritesContext } from '@/contexts/FavoritesContext';
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -20,6 +21,7 @@ export function Navigation() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const { getFavoriteCount } = useFavoritesContext();
 
   useEffect(() => {
     setMounted(true);
@@ -93,6 +95,11 @@ export function Navigation() {
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.label}</span>
+                  {item.label === 'Favorites' && getFavoriteCount() > 0 && (
+                    <span className="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                      {getFavoriteCount()}
+                    </span>
+                  )}
                 </motion.div>
               </Link>
             ))}
@@ -256,6 +263,11 @@ export function Navigation() {
                   >
                     <item.icon className="w-5 h-5" />
                     <span>{item.label}</span>
+                    {item.label === 'Favorites' && getFavoriteCount() > 0 && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                        {getFavoriteCount()}
+                      </span>
+                    )}
                   </motion.div>
                 </Link>
               ))}
