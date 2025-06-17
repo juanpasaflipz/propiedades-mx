@@ -82,9 +82,15 @@ app.get('/api/test-db', async (req, res) => {
     return res.json({ error: 'No DATABASE_URL configured' });
   }
   
-  const pool = new Pool({ 
-    connectionString: process.env.DATABASE_URL, 
-    ssl: { rejectUnauthorized: false } 
+  // Parse connection URL to avoid IPv6 issues
+  const connectionUrl = new URL(process.env.DATABASE_URL);
+  const pool = new Pool({
+    user: connectionUrl.username,
+    password: connectionUrl.password,
+    host: connectionUrl.hostname,
+    port: parseInt(connectionUrl.port),
+    database: connectionUrl.pathname.slice(1),
+    ssl: { rejectUnauthorized: false }
   });
   
   try {
@@ -136,7 +142,16 @@ app.get('/api/health', async (req, res) => {
     const propertyService = new PropertyService();
     if (process.env.DATABASE_URL) {
       // Check if properties table exists
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+      // Parse connection URL to avoid IPv6 issues
+      const connectionUrl = new URL(process.env.DATABASE_URL);
+      const pool = new Pool({
+        user: connectionUrl.username,
+        password: connectionUrl.password,
+        host: connectionUrl.hostname,
+        port: parseInt(connectionUrl.port),
+        database: connectionUrl.pathname.slice(1),
+        ssl: { rejectUnauthorized: false }
+      });
       const tableCheck = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 

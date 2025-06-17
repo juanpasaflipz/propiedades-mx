@@ -42,9 +42,17 @@ export class PropertyService {
     console.log('Connecting to database...');
     if (process.env.DATABASE_URL) {
       console.log('Using DATABASE_URL connection string');
-      // Use connection string (Railway, Render, etc.)
+      
+      // Parse the connection URL to extract components
+      const connectionUrl = new URL(process.env.DATABASE_URL);
+      
+      // Use parsed connection details to avoid IPv6 issues
       this.pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        user: connectionUrl.username,
+        password: connectionUrl.password,
+        host: connectionUrl.hostname,
+        port: parseInt(connectionUrl.port),
+        database: connectionUrl.pathname.slice(1), // Remove leading slash
         ssl: { rejectUnauthorized: false }
       });
       
