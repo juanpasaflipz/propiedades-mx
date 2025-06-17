@@ -22,10 +22,9 @@ export class PropertyProvider {
     }
 
     try {
-      // Try backend API first, then fall back to mock data
+      // Only use backend API, no mock data fallback
       const providers = [
         () => this.searchBackendAPI(filters, page, limit),
-        () => this.generateMockData(filters, page, limit),
       ];
 
       for (const provider of providers) {
