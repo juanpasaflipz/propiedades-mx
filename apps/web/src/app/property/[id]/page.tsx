@@ -15,27 +15,29 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     const fetchPropertyDetails = async () => {
       try {
-        // For now, we'll fetch all properties and find the one with matching ID
-        // In a real app, you'd have a dedicated endpoint like /api/properties/:id
-        const response = await fetch('/api/search?country=Mexico');
-        const data: SearchResponse = await response.json();
+        // Fetch property details directly from the backend API
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+        const response = await fetch(`${apiUrl}/api/properties/${params.id}`);
         
-        const foundProperty = data.listings?.find(
-          (listing: PropertyListing) => listing.id === params.id
-        );
+        if (!response.ok) {
+          throw new Error('Property not found');
+        }
         
-        if (foundProperty) {
+        const data = await response.json();
+        
+        // The backend returns a single property object
+        if (data) {
           const mappedProperty: MockProperty = {
-            id: parseInt(foundProperty.id) || 1,
-            title: foundProperty.title,
-            price: foundProperty.price,
-            bedrooms: foundProperty.bedrooms,
-            bathrooms: foundProperty.bathrooms,
-            type: foundProperty.propertyType,
-            location: foundProperty.location.city,
-            country: foundProperty.location.country,
-            transactionType: foundProperty.transactionType,
-            image: foundProperty.imageUrl || '/placeholder-property.svg',
+            id: parseInt(data.id) || 1,
+            title: data.title,
+            price: typeof data.price === 'string' ? parseFloat(data.price) : data.price,
+            bedrooms: data.bedrooms,
+            bathrooms: data.bathrooms,
+            type: data.property_type || data.propertyType,
+            location: data.city || data.location,
+            country: data.country || 'Mexico',
+            transactionType: data.transaction_type || data.transactionType || 'sale',
+            image: data.image_url || data.imageUrl || '/placeholder-property.svg',
           };
           setProperty(mappedProperty);
         }
