@@ -1,87 +1,20 @@
 services:
-  # Redis Cache (Render.com managed Redis)
-  - type: redis
-    name: real-estate-redis
-    plan: starter
-    ipAllowList: [] # Allow all Render services
-
-  # API Service
   - type: web
-    name: real-estate-api
-    runtime: node
-    plan: starter
-    rootDir: .
-    buildCommand: npm install && npx turbo build --filter=@aggregator/api
-    startCommand: cd apps/api && npm run start:prod
-    healthCheckPath: /api/health
+    name: real-estate-aggregator-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd apps/api && npm install && npm run build
+    startCommand: node apps/api/dist/server.js
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
       - key: PORT
-        value: 3001
-      - key: DATABASE_URL
-        sync: false # Set this in Render dashboard using existing database
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: real-estate-redis
-          property: connectionString
-      - key: API_KEY
-        generateValue: true
-      - key: JWT_SECRET
-        generateValue: true
-      - key: SCRAPINGBEE_API_KEY
-        sync: false
-      - key: SCRAPEDO_TOKEN
-        sync: false
-      - key: CORS_ORIGIN
-        fromService:
-          type: web
-          name: real-estate-web
-          property: host
-
-  # Web Frontend
-  - type: web
-    name: real-estate-web
-    runtime: node
-    plan: starter
-    rootDir: .
-    buildCommand: npm install && npx turbo build --filter=@aggregator/web
-    startCommand: cd apps/web && npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: real-estate-api
-          property: host
-      - key: NEXT_PUBLIC_MAPBOX_TOKEN
-        sync: false
-      - key: NEXT_PUBLIC_GA_ID
-        sync: false
-
-  # Scraper Service (Background Worker)
-  - type: worker
-    name: real-estate-scraper
-    runtime: node
-    plan: starter
-    rootDir: .
-    buildCommand: npm install && npx turbo build --filter=@aggregator/scraper
-    startCommand: cd apps/scraper && npm run start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false # Set this in Render dashboard using existing database
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: real-estate-redis
-          property: connectionString
-      - key: SCRAPINGBEE_API_KEY
-        sync: false
-      - key: SCRAPEDO_TOKEN
-        sync: false
-      - key: SCRAPING_INTERVAL
-        value: 3600000 # 1 hour in milliseconds
+        value: 3003
+    healthCheckPath: /health
