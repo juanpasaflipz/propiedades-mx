@@ -2,505 +2,280 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Filter, X, ChevronDown, Home, Loader2, Sparkles } from 'lucide-react';
+import { Search, Filter, X, Loader2, SlidersHorizontal } from 'lucide-react';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
 import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import * as ScrollArea from '@radix-ui/react-scroll-area';
+import { AdvancedFilters } from '@/components/search/AdvancedFilters';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PropertyProvider } from '@/lib/property-provider';
 import { SearchFilters } from '@/types/api';
-import { FilterObject } from '@/types/ai-search';
-
-// Mock data for demonstration
-const mockProperties = [
-  {
-    id: '1',
-    title: 'Luxury Penthouse with Ocean View',
-    price: 8500000,
-    location: 'Playa del Carmen, Quintana Roo',
-    bedrooms: 3,
-    bathrooms: 3,
-    area: 250,
-    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
-    propertyType: 'Penthouse',
-    transactionType: 'sale' as const,
-    featured: true,
-  },
-  {
-    id: '2',
-    title: 'Modern House in Polanco',
-    price: 45000,
-    location: 'Polanco, Ciudad de México',
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 320,
-    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
-    propertyType: 'House',
-    transactionType: 'rent' as const,
-  },
-  {
-    id: '3',
-    title: 'Beachfront Condo',
-    price: 5200000,
-    location: 'Cancún, Quintana Roo',
-    bedrooms: 2,
-    bathrooms: 2,
-    area: 120,
-    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
-    propertyType: 'Condo',
-    transactionType: 'sale' as const,
-  },
-  {
-    id: '4',
-    title: 'Colonial Style Home',
-    price: 6800000,
-    location: 'San Miguel de Allende, Guanajuato',
-    bedrooms: 5,
-    bathrooms: 4,
-    area: 450,
-    imageUrl: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
-    propertyType: 'House',
-    transactionType: 'sale' as const,
-    featured: true,
-  },
-  {
-    id: '5',
-    title: 'Downtown Apartment',
-    price: 22000,
-    location: 'Roma Norte, Ciudad de México',
-    bedrooms: 2,
-    bathrooms: 1,
-    area: 85,
-    imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
-    propertyType: 'Apartment',
-    transactionType: 'rent' as const,
-  },
-  {
-    id: '6',
-    title: 'Luxury Villa with Pool',
-    price: 12500000,
-    location: 'Nuevo Vallarta, Nayarit',
-    bedrooms: 6,
-    bathrooms: 5,
-    area: 600,
-    imageUrl: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
-    propertyType: 'Villa',
-    transactionType: 'sale' as const,
-  },
-];
-
-const sortOptions = [
-  { value: 'price-asc', label: 'Precio: Menor a Mayor' },
-  { value: 'price-desc', label: 'Precio: Mayor a Menor' },
-  { value: 'area-asc', label: 'Tamaño: Menor a Mayor' },
-  { value: 'area-desc', label: 'Tamaño: Mayor a Menor' },
-  { value: 'newest', label: 'Más Recientes' },
-];
-
-const propertyTypes = ['Todos', 'Casa', 'Departamento', 'Condominio', 'Villa', 'Penthouse'];
-const transactionTypes = ['Todos', 'Venta', 'Renta'];
 
 export default function PropertiesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
-  const [propertyType, setPropertyType] = useState('Todos');
-  const [transactionType, setTransactionType] = useState('Todos');
-  const [showFilters, setShowFilters] = useState(false);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchMode, setSearchMode] = useState<'traditional' | 'ai'>('traditional');
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<SearchFilters>({
+    country: 'Mexico'
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest'>('newest');
 
-  // Create property provider instance
   const propertyProvider = new PropertyProvider();
 
-  // Map Spanish to English for API
-  const propertyTypeMap: { [key: string]: string } = {
-    'Todos': 'all',
-    'Casa': 'house',
-    'Departamento': 'apartment',
-    'Condominio': 'condo',
-    'Villa': 'villa',
-    'Penthouse': 'penthouse'
-  };
-
-  const transactionTypeMap: { [key: string]: 'sale' | 'rent' | undefined } = {
-    'Todos': undefined,
-    'Venta': 'sale',
-    'Renta': 'rent'
-  };
-
-  // Fetch properties from API
+  // Load properties
   useEffect(() => {
-    async function fetchProperties() {
-      setLoading(true);
-      setError(null);
+    loadProperties();
+  }, [activeFilters, sortBy]);
+
+  const loadProperties = async () => {
+    setLoading(true);
+    try {
+      const results = await propertyProvider.searchProperties(activeFilters);
       
-      try {
-        // Build search filters
-        const filters: SearchFilters = {
-          country: 'Mexico', // Default to Mexico
-        };
-        
-        if (locationFilter) {
-          filters.city = locationFilter;
-        }
-        
-        if (propertyType !== 'Todos') {
-          const mappedType = propertyTypeMap[propertyType];
-          if (mappedType && mappedType !== 'all') {
-            filters.propertyType = mappedType;
-          }
-        }
-        
-        const mappedTransaction = transactionTypeMap[transactionType];
-        if (mappedTransaction) {
-          filters.transactionType = mappedTransaction;
-        }
-        
-        // Fetch from API
-        const response = await propertyProvider.searchProperties(filters, 1, 50);
-        
-        let listings = response.listings;
-        
-        // Apply client-side sorting
-        listings.sort((a, b) => {
-          switch (sortBy) {
-            case 'price-asc':
-              return a.price - b.price;
-            case 'price-desc':
-              return b.price - a.price;
-            case 'area-asc':
-              return (a.area || 0) - (b.area || 0);
-            case 'area-desc':
-              return (b.area || 0) - (a.area || 0);
-            default:
-              return 0;
-          }
-        });
-        
-        setProperties(listings);
-      } catch (err) {
-        console.error('Error fetching properties:', err);
-        setError('Failed to load properties. Please try again.');
-        setProperties([]);
-      } finally {
-        setLoading(false);
+      // Sort properties
+      let sorted = [...results];
+      switch (sortBy) {
+        case 'price-asc':
+          sorted.sort((a, b) => a.price - b.price);
+          break;
+        case 'price-desc':
+          sorted.sort((a, b) => b.price - a.price);
+          break;
+        case 'newest':
+          // Already sorted by newest from API
+          break;
       }
+      
+      setProperties(sorted);
+    } catch (error) {
+      console.error('Error loading properties:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchProperties();
-  }, [locationFilter, propertyType, transactionType, sortBy]);
-
-  // Handle AI search
-  const handleAISearch = async (aiFilters: FilterObject) => {
-    // Reset traditional filters
-    setSearchQuery('');
-    setLocationFilter(aiFilters.location || '');
-    
-    // Map English property types from AI to Spanish UI
-    const propertyTypeReverseMap: { [key: string]: string } = {
-      'house': 'Casa',
-      'apartment': 'Departamento',
-      'condo': 'Condominio',
-      'villa': 'Villa',
-      'penthouse': 'Penthouse'
+  const handleFiltersChange = (filters: any) => {
+    const searchFilters: SearchFilters = {
+      country: 'Mexico',
+      city: filters.city || undefined,
+      minPrice: filters.minPrice || undefined,
+      maxPrice: filters.maxPrice || undefined,
+      propertyType: filters.propertyType || undefined,
+      minBedrooms: filters.minBedrooms || undefined,
+      minBathrooms: filters.minBathrooms || undefined,
+      area: filters.neighborhood || undefined,
     };
     
-    setPropertyType(aiFilters.propertyType ? 
-      propertyTypeReverseMap[aiFilters.propertyType] || 'Todos' : 
-      'Todos'
-    );
-    
-    setTransactionType(aiFilters.transactionType ? 
-      (aiFilters.transactionType === 'sale' ? 'Venta' : 'Renta') : 
-      'Todos'
-    );
-    
-    // The useEffect will trigger and search with the new filters
+    setActiveFilters(searchFilters);
+    setShowFilters(false);
   };
 
+  const handleAISearch = (filters: any) => {
+    const searchFilters: SearchFilters = {
+      country: 'Mexico',
+      city: filters.location || undefined,
+      minPrice: filters.priceRange?.min || undefined,
+      maxPrice: filters.priceRange?.max || undefined,
+      propertyType: filters.propertyType || undefined,
+      minBedrooms: filters.bedrooms || undefined,
+      minBathrooms: filters.bathrooms || undefined,
+    };
+    
+    setActiveFilters(searchFilters);
+  };
+
+  const clearFilters = () => {
+    setActiveFilters({ country: 'Mexico' });
+    setSearchQuery('');
+  };
+
+  const activeFilterCount = Object.keys(activeFilters).filter(
+    key => key !== 'country' && activeFilters[key as keyof SearchFilters]
+  ).length;
+
   return (
-    <div className="min-h-screen">
-      {/* Header Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-        <div className="container relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
-          >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="text-gradient">Buscar Propiedades</span>
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Encuentra la propiedad perfecta en nuestra amplia colección
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-background">
+      {/* Advanced Filters Sidebar */}
+      <AdvancedFilters
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        onFiltersChange={handleFiltersChange}
+      />
 
-          {/* Search Mode Toggle */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="max-w-4xl mx-auto mb-6"
-          >
-            <div className="flex justify-center gap-2">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSearchMode('traditional')}
-                className={cn(
-                  "px-4 py-2 rounded-lg font-medium transition-all",
-                  searchMode === 'traditional' 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted hover:bg-muted/80"
-                )}
-              >
-                <Search className="w-4 h-4 inline mr-2" />
-                Búsqueda Tradicional
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSearchMode('ai')}
-                className={cn(
-                  "px-4 py-2 rounded-lg font-medium transition-all",
-                  searchMode === 'ai' 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted hover:bg-muted/80"
-                )}
-              >
-                <Sparkles className="w-4 h-4 inline mr-2" />
-                Búsqueda con IA
-              </motion.button>
-            </div>
-          </motion.div>
-
-          {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="max-w-4xl mx-auto"
-          >
-            {searchMode === 'ai' ? (
-              <NaturalLanguageSearch onSearch={handleAISearch} />
-            ) : (
-              <div className="glass rounded-2xl p-2 shadow-xl">
-                <div className="flex flex-col md:flex-row gap-2">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Buscar propiedades..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-                  <div className="flex-1 relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      placeholder="Ubicación..."
-                      value={locationFilter}
-                      onChange={(e) => setLocationFilter(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-background/50 backdrop-blur-sm rounded-xl border-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    />
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+      {/* Main Content */}
+      <div className={cn(
+        "transition-all duration-300",
+        showFilters ? "md:ml-96" : ""
+      )}>
+        {/* Header */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col gap-4">
+              {/* Title and Actions */}
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Properties in Mexico</h1>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
                     onClick={() => setShowFilters(!showFilters)}
-                    className="px-6 py-4 bg-primary/10 text-primary rounded-xl font-semibold flex items-center gap-2 hover:bg-primary/20 transition-colors"
+                    className="hidden md:flex"
                   >
-                    <Filter className="w-5 h-5" />
-                    <span>Filtros</span>
-                  </motion.button>
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  
+                  {/* Sort Dropdown */}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-4 py-2 border rounded-lg bg-background"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                  </select>
                 </div>
               </div>
-            )}
-          </motion.div>
-        </div>
-      </section>
 
-      {/* Filters and Results */}
-      <section className="px-4 pb-20">
-        <div className="container">
-          {/* Filter Bar */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-8 overflow-hidden"
-              >
-                <div className="glass rounded-2xl p-6">
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {/* Property Type */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Tipo de Propiedad</label>
-                      <div className="flex flex-wrap gap-2">
-                        {propertyTypes.map((type) => (
-                          <motion.button
-                            key={type}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setPropertyType(type)}
-                            className={cn(
-                              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                              propertyType === type
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                            )}
-                          >
-                            {type}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
+              {/* Search Bar */}
+              <div className="max-w-2xl mx-auto w-full">
+                <NaturalLanguageSearch
+                  onSearch={handleAISearch}
+                  placeholder="Try: '3 bedroom house in Polanco under 5 million'"
+                />
+              </div>
 
-                    {/* Transaction Type */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Tipo de Operación</label>
-                      <div className="flex gap-2">
-                        {transactionTypes.map((type) => (
-                          <motion.button
-                            key={type}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setTransactionType(type)}
-                            className={cn(
-                              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                              transactionType === type
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                            )}
-                          >
-                            {type}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Sort By */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Ordenar por</label>
-                      <DropdownMenu.Root>
-                        <DropdownMenu.Trigger asChild>
-                          <button className="w-full px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm font-medium flex items-center justify-between transition-colors">
-                            <span>{sortOptions.find(o => o.value === sortBy)?.label}</span>
-                            <ChevronDown className="w-4 h-4" />
-                          </button>
-                        </DropdownMenu.Trigger>
-                        <DropdownMenu.Portal>
-                          <DropdownMenu.Content
-                            className="glass rounded-lg p-2 shadow-xl min-w-[200px]"
-                            sideOffset={5}
-                          >
-                            {sortOptions.map((option) => (
-                              <DropdownMenu.Item
-                                key={option.value}
-                                onSelect={() => setSortBy(option.value)}
-                                className={cn(
-                                  'px-3 py-2 rounded-md cursor-pointer transition-colors',
-                                  'hover:bg-primary/10 hover:text-primary',
-                                  sortBy === option.value && 'bg-primary/10 text-primary'
-                                )}
-                              >
-                                {option.label}
-                              </DropdownMenu.Item>
-                            ))}
-                          </DropdownMenu.Content>
-                        </DropdownMenu.Portal>
-                      </DropdownMenu.Root>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Results Count */}
-          <div className="flex items-center justify-between mb-6">
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-muted-foreground"
-            >
-              Se encontraron <span className="font-semibold text-foreground">{properties.length}</span> propiedades
-            </motion.p>
-          </div>
-
-          {/* Loading State */}
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
-            >
-              <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Cargando propiedades...</h3>
-              <p className="text-muted-foreground">Obteniendo las últimas propiedades para ti</p>
-            </motion.div>
-          )}
-
-          {/* Error State */}
-          {error && !loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
-            >
-              <X className="w-16 h-16 mx-auto text-destructive mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Error al cargar propiedades</h3>
-              <p className="text-muted-foreground">No se pudieron cargar las propiedades. Por favor intenta de nuevo.</p>
-            </motion.div>
-          )}
-
-          {/* Property Grid */}
-          {!loading && !error && properties.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-            >
-              <AnimatePresence>
-                {properties.map((property, index) => (
-                  <motion.div
-                    key={property.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.05 }}
+              {/* Active Filters */}
+              {activeFilterCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-muted-foreground">Active filters:</span>
+                  {activeFilters.city && (
+                    <Badge variant="secondary">
+                      City: {activeFilters.city}
+                      <button
+                        className="ml-2"
+                        onClick={() => setActiveFilters({ ...activeFilters, city: undefined })}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {activeFilters.propertyType && (
+                    <Badge variant="secondary">
+                      Type: {activeFilters.propertyType}
+                      <button
+                        className="ml-2"
+                        onClick={() => setActiveFilters({ ...activeFilters, propertyType: undefined })}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {(activeFilters.minPrice || activeFilters.maxPrice) && (
+                    <Badge variant="secondary">
+                      Price: ${activeFilters.minPrice?.toLocaleString() || '0'} - ${activeFilters.maxPrice?.toLocaleString() || '∞'}
+                      <button
+                        className="ml-2"
+                        onClick={() => setActiveFilters({ ...activeFilters, minPrice: undefined, maxPrice: undefined })}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
                   >
-                    <ModernPropertyCard {...property} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
+                    Clear all
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-          {/* Empty State */}
-          {!loading && !error && properties.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-20"
-            >
-              <Home className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No se encontraron propiedades</h3>
-              <p className="text-muted-foreground">Intenta ajustar tus filtros o criterios de búsqueda</p>
-            </motion.div>
+        {/* Mobile Filter Button */}
+        <div className="md:hidden fixed bottom-4 right-4 z-50">
+          <Button
+            size="lg"
+            onClick={() => setShowFilters(true)}
+            className="rounded-full shadow-lg"
+          >
+            <Filter className="h-5 w-5 mr-2" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {/* Properties Grid */}
+        <div className="container mx-auto px-4 py-8">
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : properties.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-xl font-semibold mb-2">No properties found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your filters or search criteria
+              </p>
+              <Button onClick={clearFilters}>Clear Filters</Button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <p className="text-muted-foreground">
+                  Found {properties.length} properties
+                </p>
+              </div>
+              
+              <motion.div
+                layout
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                <AnimatePresence mode="popLayout">
+                  {properties.map((property, index) => (
+                    <motion.div
+                      key={property.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <ModernPropertyCard
+                        id={property.id}
+                        title={property.title}
+                        price={property.price}
+                        location={property.location}
+                        bedrooms={property.bedrooms}
+                        bathrooms={property.bathrooms}
+                        area={property.area}
+                        imageUrl={property.imageUrl}
+                        propertyType={property.propertyType}
+                        transactionType={property.transactionType}
+                        featured={property.featured}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </>
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

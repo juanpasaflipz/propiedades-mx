@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
 import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
+import { QuickFilters } from '@/components/search/QuickFilters';
 import { FilterObject } from '@/types/ai-search';
 import { cn } from '@/lib/utils';
 
@@ -400,6 +401,30 @@ export default function HomePage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Quick Filters Section */}
+      <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/20">
+        <div className="container max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl font-bold mb-4">Búsqueda Rápida</h2>
+            <p className="text-muted-foreground">Encuentra exactamente lo que buscas con nuestros filtros avanzados</p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+          >
+            <QuickFilters />
+          </motion.div>
         </div>
       </section>
 
