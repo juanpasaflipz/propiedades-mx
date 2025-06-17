@@ -20,13 +20,13 @@ export class PropertyService {
       },
       transaction_type: 'sale', // Default since not in DB
       price: {
-        amount: parseFloat(row.price),
+        amount: row.price ? parseFloat(row.price) : 0,
         currency: row.currency || 'MXN'
       },
       property_type: row.property_type || 'house',
       bedrooms: row.bedrooms || 0,
       bathrooms: row.bathrooms || 0,
-      area_sqm: parseFloat(row.size) || 0,
+      area_sqm: row.size ? parseFloat(row.size) : 0,
       lot_size_sqm: null,
       amenities: [],
       images: [], // Could parse from link
