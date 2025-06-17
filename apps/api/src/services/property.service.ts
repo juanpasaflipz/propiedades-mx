@@ -43,16 +43,15 @@ export class PropertyService {
     if (process.env.DATABASE_URL) {
       console.log('Using DATABASE_URL connection string');
       
-      // Parse the connection URL to extract components
-      const connectionUrl = new URL(process.env.DATABASE_URL);
+      // Try using Supabase pooler endpoint for better connectivity
+      const dbUrl = process.env.DATABASE_URL;
+      // Replace the host with pooler endpoint if it's a Supabase URL
+      const poolerUrl = dbUrl.includes('supabase.co') 
+        ? dbUrl.replace('db.', 'pooler.')  // Use pooler endpoint
+        : dbUrl;
       
-      // Use parsed connection details to avoid IPv6 issues
       this.pool = new Pool({
-        user: decodeURIComponent(connectionUrl.username),
-        password: decodeURIComponent(connectionUrl.password),
-        host: connectionUrl.hostname,
-        port: parseInt(connectionUrl.port),
-        database: connectionUrl.pathname.slice(1), // Remove leading slash
+        connectionString: poolerUrl,
         ssl: { rejectUnauthorized: false }
       });
       
