@@ -30,17 +30,38 @@ npm install
 
 # Setup environment
 cp .env.example .env
+# Edit .env and add your Supabase DATABASE_URL and other required keys
+
+# Run database migrations
+cd apps/api && node scripts/migrate.js
 
 # Run development
 npm run dev
 ```
 
+## Database Setup (Supabase)
+
+1. Create a new project on [Supabase](https://supabase.com)
+2. Copy your database URL from Settings > Database
+3. Update DATABASE_URL in all .env files with format:
+   ```
+   DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+   ```
+4. Run migrations: `cd apps/api && node scripts/migrate.js`
+
+## Default Admin Access
+
+- Email: admin@realestate.mx
+- Password: admin123
+- **Important**: Change this password immediately in production!
+
 ## Tech Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Backend**: Express, TypeScript, PostgreSQL
+- **Backend**: Express, TypeScript, PostgreSQL (Supabase)
+- **Authentication**: NextAuth.js (frontend), JWT (API)
 - **Infrastructure**: Docker, PM2, Nginx
-- **Services**: Redis (cache), ScrapingBee (proxy)
+- **Services**: Redis (cache), ScrapingBee/Scrape.do (proxy), Claude AI
 
 ## Features
 
@@ -48,10 +69,12 @@ npm run dev
 - 🔍 Advanced filtering and search
 - 🗺️ Interactive maps
 - 📱 Mobile responsive
-- 🤖 AI-powered search (MCP)
+- 🤖 AI-powered natural language search
+- 🔐 Secure authentication (login/register)
 - 🕷️ Automated scraping
 - 💾 Caching and optimization
-- 🔒 Secure admin panel
+- 🔒 Protected admin panel
+- ✅ Input validation with Zod
 
 ## Development
 

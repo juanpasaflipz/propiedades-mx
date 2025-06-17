@@ -11,6 +11,8 @@ dotenv.config();
 
 import { propertyRoutes } from './routes/property.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { aiRoutes } from './routes/ai.routes';
+import { authRoutes } from './routes/auth.routes';
 import { PropertyService } from './services/property.service';
 
 const app = express();
@@ -107,8 +109,10 @@ app.get('/api/test-db', async (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check endpoints (both paths for compatibility)
 app.get('/health', (req, res) => {

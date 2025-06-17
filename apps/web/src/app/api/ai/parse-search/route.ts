@@ -24,8 +24,22 @@ export async function POST(request: NextRequest) {
     
     console.log('Processing natural language query:', query);
     
-    // Get structured filters from AI
-    const filters = await getStructuredFilters(query);
+    // Forward to backend API instead of using frontend AI library
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003';
+    const response = await fetch(`${backendUrl}/api/ai/parse-search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const filters = data.filters;
     
     console.log('Generated filters:', filters);
     
