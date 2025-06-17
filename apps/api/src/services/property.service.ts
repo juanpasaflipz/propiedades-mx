@@ -48,8 +48,8 @@ export class PropertyService {
       
       // Use parsed connection details to avoid IPv6 issues
       this.pool = new Pool({
-        user: connectionUrl.username,
-        password: connectionUrl.password,
+        user: decodeURIComponent(connectionUrl.username),
+        password: decodeURIComponent(connectionUrl.password),
         host: connectionUrl.hostname,
         port: parseInt(connectionUrl.port),
         database: connectionUrl.pathname.slice(1), // Remove leading slash

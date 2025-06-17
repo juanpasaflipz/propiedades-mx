@@ -85,8 +85,8 @@ app.get('/api/test-db', async (req, res) => {
   // Parse connection URL to avoid IPv6 issues
   const connectionUrl = new URL(process.env.DATABASE_URL);
   const pool = new Pool({
-    user: connectionUrl.username,
-    password: connectionUrl.password,
+    user: decodeURIComponent(connectionUrl.username),
+    password: decodeURIComponent(connectionUrl.password),
     host: connectionUrl.hostname,
     port: parseInt(connectionUrl.port),
     database: connectionUrl.pathname.slice(1),
@@ -145,8 +145,8 @@ app.get('/api/health', async (req, res) => {
       // Parse connection URL to avoid IPv6 issues
       const connectionUrl = new URL(process.env.DATABASE_URL);
       const pool = new Pool({
-        user: connectionUrl.username,
-        password: connectionUrl.password,
+        user: decodeURIComponent(connectionUrl.username),
+        password: decodeURIComponent(connectionUrl.password),
         host: connectionUrl.hostname,
         port: parseInt(connectionUrl.port),
         database: connectionUrl.pathname.slice(1),
