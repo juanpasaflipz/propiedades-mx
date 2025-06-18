@@ -1,171 +1,312 @@
 import { Pool } from 'pg';
 import { Property } from '../models/property.model';
+import { Logger } from '../utils/logger';
+import { PropertySearch } from '../validation/property.schemas';
 
 export class PropertyService {
-  private pool: Pool | null = null;
+  constructor(
+    private pool: Pool,
+    private logger: Logger
+  ) {}
 
   private mapDbRowToProperty(row: any): Property {
     return {
       id: row.id.toString(),
       source: row.source,
-      country: 'Mexico', // Default since not in DB
-      state_province: row.state || '',
+      country: row.country || 'Mexico',
+      state_province: row.state_province || row.state || '',
       city: row.city || '',
-      neighborhood: '', // Not in DB
-      postal_code: '', // Not in DB
-      address: row.location || '',
+      neighborhood: row.neighborhood || '',
+      postal_code: row.postal_code || '',
+      address: row.address || row.location || '',
       coordinates: {
-        lat: 0, // Not in DB
-        lng: 0  // Not in DB
+        lat: row.coordinates_lat || 0,
+        lng: row.coordinates_lng || 0
       },
-      transaction_type: 'sale', // Default since not in DB
+      transaction_type: row.transaction_type || 'sale',
       price: {
-        amount: row.price ? parseFloat(row.price) : 0,
-        currency: row.currency || 'MXN'
+        amount: row.price_amount ? parseFloat(row.price_amount) : 0,
+        currency: row.price_currency || row.currency || 'MXN'
       },
       property_type: row.property_type || 'house',
       bedrooms: row.bedrooms || 0,
       bathrooms: row.bathrooms || 0,
-      area_sqm: row.size ? parseFloat(row.size) : 0,
-      lot_size_sqm: null,
-      amenities: [],
-      images: [], // Could parse from link
+      area_sqm: row.area_sqm ? parseFloat(row.area_sqm) : 0,
+      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : null,
+      amenities: row.amenities || [],
+      images: row.images || [],
       description: row.description || row.title || '',
-      contact_info: row.link || '',
-      listing_date: row.created_at,
-      last_updated: row.updated_at
+      contact_info: row.contact_info || row.link || '',
+      listing_date: row.listing_date || row.created_at,
+      last_updated: row.last_updated || row.updated_at
     };
   }
 
-  constructor() {
-    // Always connect to database
-    console.log('Connecting to database...');
-    if (process.env.DATABASE_URL) {
-      console.log('Using DATABASE_URL connection string');
-      
-      // Try using Supabase pooler endpoint for better connectivity
-      const dbUrl = process.env.DATABASE_URL;
-      // Replace the host with pooler endpoint if it's a Supabase URL
-      const poolerUrl = dbUrl.includes('supabase.co') 
-        ? dbUrl.replace('db.', 'pooler.')  // Use pooler endpoint
-        : dbUrl;
-      
-      this.pool = new Pool({
-        connectionString: poolerUrl,
-        ssl: { rejectUnauthorized: false }
-      });
-      
-      // Test the connection
-      this.pool.connect()
-        .then(client => {
-          console.log('Database connected successfully');
-          client.release();
-        })
-        .catch(err => {
-          console.error('Database connection error:', err.message);
-        });
-    } else {
-      // Use individual variables (local dev)
-      this.pool = new Pool({
-        user: process.env.DB_USER,
-        host: process.env.DB_HOST,
-        database: process.env.DB_NAME,
-        password: process.env.DB_PASSWORD,
-        port: parseInt(process.env.DB_PORT || '5432'),
-      });
-    }
-  }
+  async searchProperties(filters: PropertySearch): Promise<Property[]> {
+    const startTime = Date.now();
+    const queryLogger = this.logger.child({ 
+      operation: 'searchProperties',
+      filters 
+    });
 
-  async searchProperties(filters: any): Promise<Property[]> {
     try {
-      // Always use real database data
+      queryLogger.info('Searching properties');
 
-      console.log('Executing database query with filters:', filters);
-      
-      // First, let's check if the table exists and has data
-      const tableCheckQuery = 'SELECT COUNT(*) FROM properties';
-      try {
-        const countResult = await this.pool!.query(tableCheckQuery);
-        console.log('Total properties in database:', countResult.rows[0].count);
-      } catch (tableError) {
-        console.error('Error checking table:', tableError);
+      // Build dynamic query
+      const conditions: string[] = [];
+      const params: any[] = [];
+      let paramIndex = 1;
+
+      // Location filters
+      if (filters.country) {
+        conditions.push(`LOWER(country) = LOWER($${paramIndex})`);
+        params.push(filters.country);
+        paramIndex++;
       }
-      
-      // If no filters are provided, return all properties
-      const hasFilters = filters.country || filters.city || filters.transactionType || 
-                       filters.minPrice || filters.maxPrice || filters.propertyType || 
-                       filters.minBedrooms || filters.minBathrooms || filters.area || filters.zipCode;
-      
-      if (!hasFilters) {
-        console.log('No filters provided, returning all properties');
-        const simpleQuery = 'SELECT * FROM properties ORDER BY created_at DESC LIMIT 50';
-        const result = await this.pool!.query(simpleQuery);
-        console.log(`Database query returned ${result.rows.length} properties`);
-        return result.rows.map(row => this.mapDbRowToProperty(row));
+
+      if (filters.city) {
+        conditions.push(`LOWER(city) = LOWER($${paramIndex})`);
+        params.push(filters.city);
+        paramIndex++;
       }
+
+      if (filters.state) {
+        conditions.push(`LOWER(state_province) = LOWER($${paramIndex})`);
+        params.push(filters.state);
+        paramIndex++;
+      }
+
+      if (filters.neighborhood) {
+        conditions.push(`LOWER(neighborhood) LIKE LOWER($${paramIndex})`);
+        params.push(`%${filters.neighborhood}%`);
+        paramIndex++;
+      }
+
+      if (filters.zipCode) {
+        conditions.push(`postal_code = $${paramIndex}`);
+        params.push(filters.zipCode);
+        paramIndex++;
+      }
+
+      // Property filters
+      if (filters.propertyType) {
+        conditions.push(`property_type = $${paramIndex}`);
+        params.push(filters.propertyType);
+        paramIndex++;
+      }
+
+      if (filters.transactionType) {
+        conditions.push(`transaction_type = $${paramIndex}`);
+        params.push(filters.transactionType);
+        paramIndex++;
+      }
+
+      // Price filters
+      if (filters.minPrice) {
+        conditions.push(`price_amount >= $${paramIndex}`);
+        params.push(filters.minPrice);
+        paramIndex++;
+      }
+
+      if (filters.maxPrice) {
+        conditions.push(`price_amount <= $${paramIndex}`);
+        params.push(filters.maxPrice);
+        paramIndex++;
+      }
+
+      // Size filters
+      if (filters.minBedrooms) {
+        conditions.push(`bedrooms >= $${paramIndex}`);
+        params.push(filters.minBedrooms);
+        paramIndex++;
+      }
+
+      if (filters.maxBedrooms) {
+        conditions.push(`bedrooms <= $${paramIndex}`);
+        params.push(filters.maxBedrooms);
+        paramIndex++;
+      }
+
+      if (filters.minBathrooms) {
+        conditions.push(`bathrooms >= $${paramIndex}`);
+        params.push(filters.minBathrooms);
+        paramIndex++;
+      }
+
+      if (filters.maxBathrooms) {
+        conditions.push(`bathrooms <= $${paramIndex}`);
+        params.push(filters.maxBathrooms);
+        paramIndex++;
+      }
+
+      if (filters.minArea) {
+        conditions.push(`area_sqm >= $${paramIndex}`);
+        params.push(filters.minArea);
+        paramIndex++;
+      }
+
+      if (filters.maxArea) {
+        conditions.push(`area_sqm <= $${paramIndex}`);
+        params.push(filters.maxArea);
+        paramIndex++;
+      }
+
+      // Build query
+      let query = 'SELECT * FROM properties';
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+
+      // Add sorting
+      const sortColumn = this.getSortColumn(filters.sortBy);
+      query += ` ORDER BY ${sortColumn} ${filters.sortOrder || 'DESC'}`;
+
+      // Add pagination
+      const limit = filters.limit || 20;
+      const offset = ((filters.page || 1) - 1) * limit;
+      query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      params.push(limit, offset);
+
+      // Execute query
+      queryLogger.debug('Executing query', { query, params });
+      const result = await this.pool.query(query, params);
       
-      const query = `
-      SELECT * FROM properties
-      WHERE ($1::text IS NULL OR country = $1)
-      AND ($2::text IS NULL OR state = $2)
-      AND ($3::text IS NULL OR city ILIKE '%' || $3 || '%')
-      AND ($4::text IS NULL OR true) -- transaction_type not in DB
-      AND ($5::numeric IS NULL OR CAST(price AS NUMERIC) >= $5)
-      AND ($6::numeric IS NULL OR CAST(price AS NUMERIC) <= $6)
-      AND ($7::text IS NULL OR property_type ILIKE '%' || $7 || '%')
-      AND ($8::int IS NULL OR bedrooms >= $8)
-      AND ($9::int IS NULL OR bathrooms >= $9)
-      AND ($10::text IS NULL OR location ILIKE '%' || $10 || '%')
-      AND ($11::text IS NULL OR true) -- postal_code not in DB
-      ORDER BY created_at DESC
-      LIMIT 50
-    `;
+      const properties = result.rows.map(row => this.mapDbRowToProperty(row));
+      
+      const duration = Date.now() - startTime;
+      queryLogger.info('Search completed', { 
+        count: properties.length,
+        duration
+      });
+      this.logger.performance('searchProperties', duration, { 
+        resultCount: properties.length 
+      });
 
-    const values = [
-      filters.country,
-      filters.state,
-      filters.city,
-      filters.transactionType,
-      filters.minPrice ? parseFloat(filters.minPrice) : null,
-      filters.maxPrice ? parseFloat(filters.maxPrice) : null,
-      filters.propertyType,
-      filters.minBedrooms ? parseInt(filters.minBedrooms) : null,
-      filters.minBathrooms ? parseInt(filters.minBathrooms) : null,
-      filters.area,
-      filters.zipCode,
-    ];
-
-      const result = await this.pool!.query(query, values);
-      console.log(`Database query returned ${result.rows.length} properties`);
-      return result.rows.map(row => this.mapDbRowToProperty(row));
-    } catch (error) {
-      console.error('Database query error:', error);
+      return properties;
+    } catch (error: any) {
+      queryLogger.error('Search failed', error);
       throw error;
     }
   }
 
   async getPropertyById(id: string): Promise<Property | null> {
-    // Always use real database data
+    const startTime = Date.now();
+    this.logger.info('Getting property by ID', { id });
 
-    const query = 'SELECT * FROM properties WHERE id = $1';
-    const result = await this.pool!.query(query, [id]);
-    return result.rows[0] ? this.mapDbRowToProperty(result.rows[0]) : null;
+    try {
+      const query = 'SELECT * FROM properties WHERE id = $1';
+      const result = await this.pool.query(query, [id]);
+      
+      if (result.rows.length === 0) {
+        this.logger.info('Property not found', { id });
+        return null;
+      }
+
+      const property = this.mapDbRowToProperty(result.rows[0]);
+      
+      const duration = Date.now() - startTime;
+      this.logger.performance('getPropertyById', duration);
+      
+      return property;
+    } catch (error: any) {
+      this.logger.error('Failed to get property by ID', error, { id });
+      throw error;
+    }
   }
 
   async getPropertiesByCountry(country: string): Promise<Property[]> {
-    // Always use real database data
+    this.logger.info('Getting properties by country', { country });
 
-    // Since country is not in DB, return all properties for Mexico
-    const query = 'SELECT * FROM properties LIMIT 50';
-    const result = await this.pool!.query(query);
-    return result.rows.map(row => this.mapDbRowToProperty(row));
+    try {
+      const query = 'SELECT * FROM properties WHERE LOWER(country) = LOWER($1) LIMIT 100';
+      const result = await this.pool.query(query, [country]);
+      
+      const properties = result.rows.map(row => this.mapDbRowToProperty(row));
+      
+      this.logger.info('Properties by country retrieved', { 
+        country, 
+        count: properties.length 
+      });
+      
+      return properties;
+    } catch (error: any) {
+      this.logger.error('Failed to get properties by country', error, { country });
+      throw error;
+    }
   }
 
   async getPropertiesByCity(city: string): Promise<Property[]> {
-    // Always use real database data
+    this.logger.info('Getting properties by city', { city });
 
-    const query = 'SELECT * FROM properties WHERE city ILIKE $1 LIMIT 50';
-    const result = await this.pool!.query(query, [`%${city}%`]);
-    return result.rows.map(row => this.mapDbRowToProperty(row));
+    try {
+      const query = 'SELECT * FROM properties WHERE LOWER(city) = LOWER($1) LIMIT 100';
+      const result = await this.pool.query(query, [city]);
+      
+      const properties = result.rows.map(row => this.mapDbRowToProperty(row));
+      
+      this.logger.info('Properties by city retrieved', { 
+        city, 
+        count: properties.length 
+      });
+      
+      return properties;
+    } catch (error: any) {
+      this.logger.error('Failed to get properties by city', error, { city });
+      throw error;
+    }
   }
-} 
+
+  async getPropertyStats(): Promise<any> {
+    this.logger.info('Getting property statistics');
+
+    try {
+      const queries = {
+        total: 'SELECT COUNT(*) as count FROM properties',
+        byType: 'SELECT property_type, COUNT(*) as count FROM properties GROUP BY property_type',
+        byCity: 'SELECT city, COUNT(*) as count FROM properties GROUP BY city ORDER BY count DESC LIMIT 10',
+        priceRange: 'SELECT MIN(price_amount) as min, MAX(price_amount) as max, AVG(price_amount) as avg FROM properties'
+      };
+
+      const [total, byType, byCity, priceRange] = await Promise.all([
+        this.pool.query(queries.total),
+        this.pool.query(queries.byType),
+        this.pool.query(queries.byCity),
+        this.pool.query(queries.priceRange)
+      ]);
+
+      const stats = {
+        totalProperties: parseInt(total.rows[0].count),
+        byPropertyType: byType.rows.reduce((acc, row) => {
+          acc[row.property_type] = parseInt(row.count);
+          return acc;
+        }, {}),
+        topCities: byCity.rows.map(row => ({
+          city: row.city,
+          count: parseInt(row.count)
+        })),
+        priceStats: {
+          min: parseFloat(priceRange.rows[0].min || 0),
+          max: parseFloat(priceRange.rows[0].max || 0),
+          avg: parseFloat(priceRange.rows[0].avg || 0)
+        }
+      };
+
+      this.logger.info('Property statistics retrieved', stats);
+      return stats;
+    } catch (error: any) {
+      this.logger.error('Failed to get property statistics', error);
+      throw error;
+    }
+  }
+
+  private getSortColumn(sortBy?: string): string {
+    const sortMap: Record<string, string> = {
+      price: 'price_amount',
+      date: 'listing_date',
+      area: 'area_sqm',
+      bedrooms: 'bedrooms'
+    };
+
+    return sortMap[sortBy || 'date'] || 'listing_date';
+  }
+}

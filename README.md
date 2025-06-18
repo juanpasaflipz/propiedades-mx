@@ -49,11 +49,14 @@ npm run dev
    ```
 4. Run migrations: `cd apps/api && node scripts/migrate.js`
 
-## Default Admin Access
+## Admin Access
 
-- Email: admin@realestate.mx
-- Password: admin123
-- **Important**: Change this password immediately in production!
+Admin accounts must be created through the database or using environment variables. No default credentials are provided for security reasons.
+
+To create an admin user:
+1. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your `.env` file
+2. Run the seed script: `npm run db:seed` (after implementing)
+3. Or manually insert into the database with proper password hashing
 
 ## Tech Stack
 

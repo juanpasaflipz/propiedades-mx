@@ -3,34 +3,55 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import { Pool } from 'pg';
+import * as Sentry from '@sentry/node';
+import { env } from './config/env';
+import { initSentry, sentryErrorHandler } from './config/sentry';
+import { container } from './container';
+import { skipLogging, performanceMonitor, errorLogger } from './middleware/monitoring';
 
-// Load environment variables first, before importing routes
-dotenv.config();
-
+// Import routes
 import { propertyRoutes } from './routes/property.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { aiRoutes } from './routes/ai.routes';
 import { authRoutes } from './routes/auth.routes';
-import { PropertyService } from './services/property.service';
+import { healthRoutes } from './routes/health.routes';
+
+// Initialize Sentry before creating Express app
+initSentry();
 
 const app = express();
-const port = parseInt(process.env.PORT || '3003', 10);
-console.log('Environment PORT:', process.env.PORT);
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
-console.log('Using port:', port);
+
+// Get logger from container
+const logger = container.get('logger');
+
+// Sentry request handler must be the first middleware
+app.use(Sentry.Handlers.requestHandler());
+
+// Sentry tracing handler
+app.use(Sentry.Handlers.tracingHandler());
+
+const port = env.PORT;
+logger.info('Starting server', { port, environment: env.NODE_ENV });
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
 
 // Compression middleware
 app.use(compression());
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com'
+  origin: env.NODE_ENV === 'production' 
+    ? env.FRONTEND_URL
     : true, // Allow all origins in development
   credentials: true,
   optionsSuccessStatus: 200,
@@ -41,11 +62,15 @@ app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX_REQUESTS,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health' || req.path === '/api/health';
+  }
 });
 
 // Apply rate limiting to all API routes
@@ -54,6 +79,12 @@ app.use('/api/', limiter);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware (skip for health checks)
+app.use(skipLogging);
+
+// Performance monitoring
+app.use(performanceMonitor);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -66,182 +97,135 @@ app.get('/', (req, res) => {
         search: '/api/properties/search',
         byId: '/api/properties/:id',
         byCountry: '/api/properties/country/:country',
-        byCity: '/api/properties/city/:city'
+        byCity: '/api/properties/city/:city',
+        stats: '/api/properties/stats'
       },
       admin: {
         apiLogs: '/api/admin/api-logs',
         apiProviders: '/api/admin/api-providers'
+      },
+      auth: {
+        login: '/api/auth/login',
+        register: '/api/auth/register',
+        refresh: '/api/auth/refresh',
+        logout: '/api/auth/logout',
+        me: '/api/auth/me'
       }
     }
   });
 });
 
-// Test endpoint for debugging
-app.get('/api/test-db', async (req, res) => {
-  if (!process.env.DATABASE_URL) {
-    return res.json({ error: 'No DATABASE_URL configured' });
-  }
-  
-  // Parse connection URL to avoid IPv6 issues
-  const connectionUrl = new URL(process.env.DATABASE_URL);
-  const pool = new Pool({
-    user: decodeURIComponent(connectionUrl.username),
-    password: decodeURIComponent(connectionUrl.password),
-    host: connectionUrl.hostname,
-    port: parseInt(connectionUrl.port),
-    database: connectionUrl.pathname.slice(1),
-    ssl: { rejectUnauthorized: false }
-  });
-  
-  try {
-    // Test basic query
-    const result = await pool.query('SELECT * FROM properties LIMIT 1');
-    const columns = Object.keys(result.rows[0] || {});
-    
-    res.json({
-      success: true,
-      rowCount: result.rowCount,
-      columns: columns,
-      sampleRow: result.rows[0]
-    });
-  } catch (error: any) {
-    res.json({
-      success: false,
-      error: error.message,
-      hint: error.hint,
-      detail: error.detail
-    });
-  } finally {
-    await pool.end();
-  }
-});
+// Health check routes (before other routes)
+app.use('/', healthRoutes);
 
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Health check endpoints (both paths for compatibility)
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+// 404 handler
+app.use((req, res) => {
+  logger.warn('Route not found', {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip
+  });
+  
+  res.status(404).json({ 
+    error: 'Route not found',
+    path: req.originalUrl,
+    success: false
   });
 });
 
-app.get('/api/health', async (req, res) => {
-  let databaseStatus = 'unknown';
-  let tableExists = false;
-  let propertyCount = 0;
-  
-  try {
-    // Test database connection
-    const propertyService = new PropertyService();
-    if (process.env.DATABASE_URL) {
-      // Check if properties table exists
-      // Parse connection URL to avoid IPv6 issues
-      const connectionUrl = new URL(process.env.DATABASE_URL);
-      const pool = new Pool({
-        user: decodeURIComponent(connectionUrl.username),
-        password: decodeURIComponent(connectionUrl.password),
-        host: connectionUrl.hostname,
-        port: parseInt(connectionUrl.port),
-        database: connectionUrl.pathname.slice(1),
-        ssl: { rejectUnauthorized: false }
-      });
-      const tableCheck = await pool.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'properties'
-        );
-      `);
-      tableExists = tableCheck.rows[0].exists;
-      
-      if (tableExists) {
-        const countResult = await pool.query('SELECT COUNT(*) FROM properties');
-        propertyCount = parseInt(countResult.rows[0].count);
-        
-        // Get column information
-        const columnsQuery = await pool.query(`
-          SELECT column_name, data_type 
-          FROM information_schema.columns 
-          WHERE table_name = 'properties'
-          ORDER BY ordinal_position;
-        `);
-        
-        databaseStatus = 'connected';
-        res.locals.columns = columnsQuery.rows;
-      } else {
-        databaseStatus = 'table_missing';
-      }
-      await pool.end();
-    } else {
-      databaseStatus = 'not_configured';
-    }
-  } catch (error) {
-    databaseStatus = 'error: ' + error.message;
-  }
-  
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    database: {
-      status: databaseStatus,
-      tableExists,
-      propertyCount,
-      hasUrl: !!process.env.DATABASE_URL,
-      columns: res.locals.columns || []
-    }
-  });
-});
+// Sentry error handler must go before any other error middleware
+app.use(sentryErrorHandler);
+
+// Error logging middleware
+app.use(errorLogger);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  // Default to 500 server error
+  const statusCode = err.statusCode || err.status || 500;
   
-  // Don't leak error details in production
-  const message = process.env.NODE_ENV === 'production' 
-    ? 'Internal server error' 
-    : err.message;
-    
-  res.status(err.status || 500).json({
-    error: message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
-  });
+  // Prepare error response
+  const errorResponse: any = {
+    error: env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    success: false,
+    statusCode
+  };
+
+  // Add stack trace in development
+  if (env.NODE_ENV !== 'production') {
+    errorResponse.stack = err.stack;
+    errorResponse.details = err.details;
+  }
+
+  // Send error response
+  res.status(statusCode).json(errorResponse);
 });
 
+// Start server
 const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`Server is running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
-  console.log(`Health check available at http://0.0.0.0:${port}/health`);
-});
-
-// Keep the process alive
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
+  logger.info('Server started successfully', {
+    port,
+    environment: env.NODE_ENV,
+    nodeVersion: process.version,
+    pid: process.pid
   });
 });
+
+// Graceful shutdown
+async function gracefulShutdown(signal: string) {
+  logger.info(`${signal} received, starting graceful shutdown`);
+  
+  // Stop accepting new connections
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+
+  // Close database connections
+  try {
+    await container.dispose();
+    logger.info('Database connections closed');
+  } catch (error) {
+    logger.error('Error closing database connections', error);
+  }
+
+  // Exit process
+  process.exit(0);
+}
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Don't exit on uncaught exceptions in production
-  if (process.env.NODE_ENV !== 'production') {
+  logger.error('Uncaught Exception', error);
+  
+  // In production, try to gracefully shutdown
+  if (env.NODE_ENV === 'production') {
+    gracefulShutdown('uncaughtException');
+  } else {
     process.exit(1);
   }
 });
 
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit on unhandled rejections in production
-  if (process.env.NODE_ENV !== 'production') {
+  logger.error('Unhandled Rejection', reason as Error, {
+    promise: promise.toString()
+  });
+  
+  // In production, try to gracefully shutdown
+  if (env.NODE_ENV === 'production') {
+    gracefulShutdown('unhandledRejection');
+  } else {
     process.exit(1);
   }
-}); 
+});
+
+export { app, server };

@@ -1,56 +1,43 @@
 import { Router, Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { Pool } from 'pg';
+import { AuthService } from '../services/auth.service';
 import { validateBody } from '../middleware/validation';
 import { LoginSchema, RegisterSchema } from '../validation/schemas';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-change-in-production';
+const authService = new AuthService();
 
 // Login endpoint
 router.post('/login', validateBody(LoginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    // Get user from database
-    const result = await pool.query(
-      'SELECT id, email, name, password, role FROM users WHERE email = $1',
-      [email]
-    );
-
-    const user = result.rows[0];
-
+    // Find user
+    const user = await authService.findUserByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
+    const isPasswordValid = await authService.comparePassword(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '30d' }
-    );
+    // Generate tokens
+    const { accessToken, refreshToken } = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
 
-    // Return user data and token
+    // Save refresh token
+    await authService.saveRefreshToken(user.id, refreshToken);
+
+    // Return user data and tokens
     res.json({
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -70,40 +57,27 @@ router.post('/register', validateBody(RegisterSchema), async (req: Request, res:
   try {
     const { email, password, name } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    // Check if user already exists
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-
-    if (existingUser.rows.length > 0) {
+    // Check if user exists
+    if (await authService.userExists(email)) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create user
-    const result = await pool.query(
-      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email, hashedPassword, name || null, 'user']
-    );
+    const user = await authService.createUser(email, password, name);
 
-    const user = result.rows[0];
+    // Generate tokens
+    const { accessToken, refreshToken } = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '30d' }
-    );
+    // Save refresh token
+    await authService.saveRefreshToken(user.id, refreshToken);
 
     res.status(201).json({
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -118,37 +92,81 @@ router.post('/register', validateBody(RegisterSchema), async (req: Request, res:
   }
 });
 
-// Get current user endpoint
-router.get('/me', async (req: Request, res: Response) => {
+// Refresh token endpoint
+router.post('/refresh', async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    const token = authHeader.split(' ')[1];
-    
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
-      
-      // Get user from database
-      const result = await pool.query(
-        'SELECT id, email, name, role FROM users WHERE id = $1',
-        [decoded.userId]
-      );
-
-      const user = result.rows[0];
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      res.json({ user });
-    } catch (error) {
-      return res.status(401).json({ error: 'Invalid token' });
+    // Verify refresh token
+    const payload = authService.verifyRefreshToken(refreshToken);
+    if (!payload) {
+      return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
+    // Validate token in database
+    const isValid = await authService.validateRefreshToken(payload.userId, refreshToken);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
+    // Get updated user info
+    const user = await authService.findUserById(payload.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Generate new tokens
+    const tokens = authService.generateTokens({
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    // Save new refresh token
+    await authService.saveRefreshToken(user.id, tokens.refreshToken);
+
+    res.json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    });
+
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Token refresh failed' });
+  }
+});
+
+// Logout endpoint
+router.post('/logout', requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (req.user) {
+      await authService.revokeRefreshToken(req.user.id);
+    }
+    
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Get current user endpoint
+router.get('/me', requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const user = await authService.findUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });

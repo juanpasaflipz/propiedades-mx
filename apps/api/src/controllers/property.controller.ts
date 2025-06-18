@@ -1,20 +1,31 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PropertyService } from '../services/property.service';
+import { Logger } from '../utils/logger';
+import { PropertySearchSchema, PropertyIdSchema, LocationParamsSchema } from '../validation/property.schemas';
+import { z } from 'zod';
 
 export class PropertyController {
-  private propertyService: PropertyService;
+  constructor(
+    private propertyService: PropertyService,
+    private logger: Logger
+  ) {}
 
-  constructor() {
-    this.propertyService = new PropertyService();
-  }
-
-  searchProperties = async (req: Request, res: Response) => {
+  searchProperties = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const filters = req.query;
-      console.log('Searching properties with filters:', filters);
-      const properties = await this.propertyService.searchProperties(filters);
+      // Validate query parameters
+      const validatedFilters = PropertySearchSchema.parse(req.query);
       
-      // Transform properties to match frontend expectations
+      // Log request
+      this.logger.info('Property search request', { 
+        filters: validatedFilters,
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+
+      // Search properties
+      const properties = await this.propertyService.searchProperties(validatedFilters);
+      
+      // Transform for frontend compatibility
       const transformedProperties = properties.map(property => ({
         id: property.id,
         title: property.description || property.address || 'Property',
@@ -27,58 +38,155 @@ export class PropertyController {
         bathrooms: property.bathrooms,
         area: property.area_sqm,
         imageUrl: property.images[0] || '/placeholder-property.svg',
-        listingUrl: '#',
+        listingUrl: property.contact_info || '#',
         description: property.description,
         publishedAt: property.listing_date,
       }));
-      
-      // Return in the expected format
+
+      // Get total count for pagination
+      // TODO: Implement count query for proper pagination
+      const total = transformedProperties.length;
+
+      // Return response
       res.json({
         listings: transformedProperties,
-        total: transformedProperties.length,
-        page: 1,
-        totalPages: 1
+        total,
+        page: validatedFilters.page,
+        totalPages: Math.ceil(total / validatedFilters.limit),
+        success: true
       });
-    } catch (error: any) {
-      console.error('Error searching properties:', error);
-      res.status(500).json({ 
-        error: 'Error searching properties',
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-    }
-  };
 
-  getPropertyById = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const property = await this.propertyService.getPropertyById(id);
-      if (!property) {
-        return res.status(404).json({ error: 'Property not found' });
+      // Log successful response
+      this.logger.info('Property search completed', {
+        resultCount: transformedProperties.length,
+        page: validatedFilters.page
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // Validation error
+        this.logger.warn('Property search validation failed', {
+          errors: error.errors,
+          query: req.query
+        });
+        
+        return res.status(400).json({ 
+          error: 'Invalid search parameters',
+          details: error.errors,
+          success: false
+        });
       }
-      res.json(property);
-    } catch (error) {
-      res.status(500).json({ error: 'Error fetching property' });
+
+      // Pass to error handler
+      next(error);
     }
   };
 
-  getPropertiesByCountry = async (req: Request, res: Response) => {
+  getPropertyById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { country } = req.params;
+      // Validate parameters
+      const { id } = PropertyIdSchema.parse(req.params);
+      
+      this.logger.info('Get property by ID request', { id });
+
+      // Get property
+      const property = await this.propertyService.getPropertyById(id);
+      
+      if (!property) {
+        this.logger.info('Property not found', { id });
+        return res.status(404).json({ 
+          error: 'Property not found',
+          success: false
+        });
+      }
+
+      // Return property
+      res.json({
+        data: property,
+        success: true
+      });
+
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: 'Invalid property ID format',
+          success: false
+        });
+      }
+      next(error);
+    }
+  };
+
+  getPropertiesByCountry = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Validate parameters
+      const { country } = LocationParamsSchema.parse(req.params);
+      
+      if (!country) {
+        return res.status(400).json({ 
+          error: 'Country parameter is required',
+          success: false
+        });
+      }
+
+      this.logger.info('Get properties by country request', { country });
+
+      // Get properties
       const properties = await this.propertyService.getPropertiesByCountry(country);
-      res.json(properties);
+      
+      res.json({
+        properties,
+        count: properties.length,
+        success: true
+      });
+
     } catch (error) {
-      res.status(500).json({ error: 'Error fetching properties by country' });
+      next(error);
     }
   };
 
-  getPropertiesByCity = async (req: Request, res: Response) => {
+  getPropertiesByCity = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { city } = req.params;
+      // Validate parameters
+      const { city } = LocationParamsSchema.parse(req.params);
+      
+      if (!city) {
+        return res.status(400).json({ 
+          error: 'City parameter is required',
+          success: false
+        });
+      }
+
+      this.logger.info('Get properties by city request', { city });
+
+      // Get properties
       const properties = await this.propertyService.getPropertiesByCity(city);
-      res.json(properties);
+      
+      res.json({
+        properties,
+        count: properties.length,
+        success: true
+      });
+
     } catch (error) {
-      res.status(500).json({ error: 'Error fetching properties by city' });
+      next(error);
     }
   };
-} 
+
+  getPropertyStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      this.logger.info('Get property statistics request');
+
+      // Get stats
+      const stats = await this.propertyService.getPropertyStats();
+      
+      res.json({
+        data: stats,
+        success: true
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
+}

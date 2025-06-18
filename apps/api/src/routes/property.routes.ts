@@ -1,19 +1,21 @@
 import { Router } from 'express';
-import { PropertyController } from '../controllers/property.controller';
+import { container } from '../container';
+import { optionalAuth } from '../middleware/auth';
 
 const router = Router();
-const propertyController = new PropertyController();
+const propertyController = container.get('propertyController');
 
-// Search properties with filters
-router.get('/search', propertyController.searchProperties);
+// Search properties with optional auth for favorites
+router.get('/search', optionalAuth, propertyController.searchProperties);
 
-// Get property by ID
+// Get property statistics
+router.get('/stats', propertyController.getPropertyStats);
+
+// Get specific property
 router.get('/:id', propertyController.getPropertyById);
 
-// Get properties by country
+// Get properties by location
 router.get('/country/:country', propertyController.getPropertiesByCountry);
-
-// Get properties by city
 router.get('/city/:city', propertyController.getPropertiesByCity);
 
 export const propertyRoutes = router; 

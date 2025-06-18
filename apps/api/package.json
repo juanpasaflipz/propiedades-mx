@@ -12,6 +12,7 @@
     "test:coverage": "jest --coverage",
     "db:migrate": "node scripts/migrate.js",
     "db:migrate:create": "node scripts/create-migration.js",
+    "db:seed": "node scripts/seed.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "clean": "rm -rf dist"
@@ -21,6 +22,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sentry/node": "^9.30.0",
+    "@sentry/profiling-node": "^9.30.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -38,6 +41,7 @@
     "openai": "^5.5.1",
     "pg": "^8.11.3",
     "typescript": "^5.3.3",
+    "winston": "^3.17.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
