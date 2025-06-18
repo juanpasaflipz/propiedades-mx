@@ -16,7 +16,8 @@ declare global {
   }
 }
 
-const authService = container.get<AuthService>('authService');
+// Get authService lazily to avoid initialization issues
+const getAuthService = () => container.get<AuthService>('authService');
 
 // Middleware to require authentication
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -28,14 +29,14 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = authService.verifyAccessToken(token);
+    const decoded = getAuthService().verifyAccessToken(token);
 
     if (!decoded) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
     // Get user from database to ensure they still exist
-    const user = await authService.findUserById(decoded.userId);
+    const user = await getAuthService().findUserById(decoded.userId);
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });

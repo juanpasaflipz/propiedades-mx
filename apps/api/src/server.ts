@@ -128,6 +128,13 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 
+// Debug routes (only in development)
+if (env.NODE_ENV !== 'production') {
+  const { createDebugRoutes } = require('./routes/debug.routes');
+  const pool = container.get('pool');
+  app.use('/api/debug', createDebugRoutes(pool, logger));
+}
+
 // 404 handler
 app.use((req, res) => {
   logger.warn('Route not found', {
