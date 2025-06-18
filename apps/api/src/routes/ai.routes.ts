@@ -172,7 +172,10 @@ function extractKeywords(query: string): any {
   const locations = ['polanco', 'condesa', 'roma norte', 'santa fe', 'coyoacán'];
   for (const loc of locations) {
     if (normalized.includes(loc)) {
-      filters.location = loc;
+      // Capitalize each word in the location
+      filters.location = loc.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
       break;
     }
   }
