@@ -82,4 +82,63 @@ router.get('/api/health', async (req: Request, res: Response) => {
   res.status(statusCode).json(healthStatus);
 });
 
+// Container test endpoint
+router.get('/api/container-test', async (req: Request, res: Response) => {
+  try {
+    const tests = {
+      logger: false,
+      db: false,
+      pool: false,
+      propertyService: false,
+      propertyController: false
+    };
+    
+    // Test each dependency
+    try {
+      container.get('logger');
+      tests.logger = true;
+    } catch (e: any) {
+      tests.logger = e.message;
+    }
+    
+    try {
+      container.get('db');
+      tests.db = true;
+    } catch (e: any) {
+      tests.db = e.message;
+    }
+    
+    try {
+      container.get('pool');
+      tests.pool = true;
+    } catch (e: any) {
+      tests.pool = e.message;
+    }
+    
+    try {
+      container.get('propertyService');
+      tests.propertyService = true;
+    } catch (e: any) {
+      tests.propertyService = e.message;
+    }
+    
+    try {
+      container.get('propertyController');
+      tests.propertyController = true;
+    } catch (e: any) {
+      tests.propertyController = e.message;
+    }
+    
+    res.json({
+      status: 'container-test',
+      tests
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message
+    });
+  }
+});
+
 export { router as healthRoutes };

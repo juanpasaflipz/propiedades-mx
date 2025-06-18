@@ -158,6 +158,15 @@ app.use(errorLogger);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Log error details
+  logger.error('Unhandled error in request', err, {
+    method: req.method,
+    url: req.url,
+    body: req.body,
+    query: req.query,
+    headers: req.headers
+  });
+  
   // Default to 500 server error
   const statusCode = err.statusCode || err.status || 500;
   

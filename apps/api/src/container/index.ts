@@ -88,19 +88,25 @@ class DIContainer {
   }
 
   get<K extends keyof Container>(key: K): Container[K] {
-    // Special handling for pool alias
-    if (key === 'pool') {
-      return this.get('db') as any;
-    }
-    
-    if (!this.instances.has(key)) {
-      const factory = this.factories.get(key);
-      if (!factory) {
-        throw new Error(`No factory registered for ${String(key)}`);
+    try {
+      // Special handling for pool alias
+      if (key === 'pool') {
+        return this.get('db') as any;
       }
-      this.instances.set(key, factory());
+      
+      if (!this.instances.has(key)) {
+        const factory = this.factories.get(key);
+        if (!factory) {
+          throw new Error(`No factory registered for ${String(key)}`);
+        }
+        console.log(`Creating instance for: ${String(key)}`);
+        this.instances.set(key, factory());
+      }
+      return this.instances.get(key)!;
+    } catch (error) {
+      console.error(`Failed to get container dependency: ${String(key)}`, error);
+      throw error;
     }
-    return this.instances.get(key)!;
   }
 
   async dispose() {
