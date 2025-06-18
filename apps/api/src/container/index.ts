@@ -11,6 +11,7 @@ import { Logger } from '../utils/logger';
 export interface Container {
   // Database
   db: Pool;
+  pool: Pool; // alias for db
   
   // Services
   propertyService: PropertyService;
@@ -36,13 +37,16 @@ class DIContainer {
 
   private registerFactories() {
     // Database
-    this.register('db', () => new Pool({
+    const poolFactory = () => new Pool({
       connectionString: env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
-    }));
+    });
+    
+    this.register('db', poolFactory);
+    this.register('pool', poolFactory); // alias for compatibility
 
     // Logger (created first as services depend on it)
     this.register('logger', () => new Logger());
@@ -84,6 +88,11 @@ class DIContainer {
   }
 
   get<K extends keyof Container>(key: K): Container[K] {
+    // Special handling for pool alias
+    if (key === 'pool') {
+      return this.get('db') as any;
+    }
+    
     if (!this.instances.has(key)) {
       const factory = this.factories.get(key);
       if (!factory) {
