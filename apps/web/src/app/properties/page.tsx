@@ -73,9 +73,14 @@ export default function PropertiesPage() {
   };
 
   const handleAISearch = (filters: any) => {
+    // Capitalize first letter of location for database compatibility
+    const location = filters.location ? 
+      filters.location.charAt(0).toUpperCase() + filters.location.slice(1).toLowerCase() : 
+      undefined;
+    
     const searchFilters: SearchFilters = {
       country: 'Mexico',
-      city: filters.location || undefined,
+      city: location,
       minPrice: filters.priceRange?.min || undefined,
       maxPrice: filters.priceRange?.max || undefined,
       propertyType: filters.propertyType || undefined,
@@ -148,7 +153,6 @@ export default function PropertiesPage() {
               <div className="max-w-2xl mx-auto w-full">
                 <NaturalLanguageSearch
                   onSearch={handleAISearch}
-                  placeholder="Try: '3 bedroom house in Polanco under 5 million'"
                 />
               </div>
 
