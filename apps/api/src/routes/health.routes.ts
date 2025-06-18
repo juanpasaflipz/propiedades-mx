@@ -165,4 +165,31 @@ router.get('/api/container-test', async (req: Request, res: Response) => {
   }
 });
 
+// Get distinct cities
+router.get('/api/cities', async (req: Request, res: Response) => {
+  try {
+    const pool = container.get('pool') as Pool;
+    const result = await pool.query(`
+      SELECT DISTINCT city, COUNT(*) as count 
+      FROM properties 
+      WHERE city IS NOT NULL 
+      GROUP BY city 
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+    
+    res.json({
+      success: true,
+      cities: result.rows,
+      total: result.rowCount
+    });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch cities' 
+    });
+  }
+});
+
 export { router as healthRoutes };
