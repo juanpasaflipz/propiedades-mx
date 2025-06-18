@@ -39,12 +39,12 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
     // Add response time header
     res.set('X-Response-Time', `${responseTime}ms`);
     
-    // Send Sentry performance data
-    const transaction = Sentry.getCurrentScope().getTransaction();
-    if (transaction) {
-      transaction.setHttpStatus(res.statusCode);
-      transaction.setTag('http.status_code', res.statusCode);
-    }
+    // Send performance data to Sentry
+    Sentry.getCurrentScope().setTag('http.status_code', res.statusCode);
+    Sentry.getCurrentScope().setContext('response', {
+      statusCode: res.statusCode,
+      responseTime: responseTime
+    });
     
     return res.send(data);
   };
@@ -54,20 +54,24 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
 
 // Performance monitoring middleware
 export function performanceMonitor(req: Request, res: Response, next: NextFunction) {
-  const transaction = Sentry.startTransaction({
-    op: 'http.request',
-    name: `${req.method} ${req.route?.path || req.path}`,
-    data: {
-      method: req.method,
-      url: req.originalUrl,
-    }
+  // Start timing
+  const startTime = Date.now();
+  
+  // Track request in Sentry
+  Sentry.getCurrentScope().setContext('http_request', {
+    method: req.method,
+    url: req.originalUrl,
+    path: req.route?.path || req.path
   });
 
-  Sentry.getCurrentScope().setSpan(transaction);
-
   res.on('finish', () => {
-    transaction.setHttpStatus(res.statusCode);
-    transaction.finish();
+    const duration = Date.now() - startTime;
+    
+    // Log performance metrics
+    Sentry.getCurrentScope().setContext('performance', {
+      duration: duration,
+      statusCode: res.statusCode
+    });
   });
 
   next();

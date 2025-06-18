@@ -12,8 +12,6 @@ export function initSentry() {
     dsn: env.SENTRY_DSN,
     environment: env.NODE_ENV,
     integrations: [
-      // Automatically instrument Node.js libraries and frameworks
-      ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
       // Add profiling integration
       nodeProfilingIntegration(),
     ],
@@ -52,13 +50,11 @@ export function initSentry() {
   console.log('✅ Sentry initialized');
 }
 
-// Express error handler
-export const sentryErrorHandler = Sentry.Handlers.errorHandler({
-  shouldHandleError(error) {
-    // Capture all 4xx and 5xx errors
-    if (error.status && error.status >= 400) {
-      return true;
-    }
-    return true;
-  },
-});
+// Express error handler - Sentry v9 uses different API
+export const sentryErrorHandler = (err: any, req: any, res: any, next: any) => {
+  // Log error to Sentry
+  Sentry.captureException(err);
+  
+  // Continue to next error handler
+  next(err);
+};

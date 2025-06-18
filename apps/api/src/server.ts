@@ -24,11 +24,15 @@ const app = express();
 // Get logger from container
 const logger = container.get('logger');
 
-// Sentry request handler must be the first middleware
-app.use(Sentry.Handlers.requestHandler());
-
-// Sentry tracing handler
-app.use(Sentry.Handlers.tracingHandler());
+// Add request context to Sentry
+app.use((req, res, next) => {
+  Sentry.getCurrentScope().setContext('request', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+  });
+  next();
+});
 
 const port = env.PORT;
 logger.info('Starting server', { port, environment: env.NODE_ENV });
