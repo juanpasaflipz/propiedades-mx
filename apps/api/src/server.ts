@@ -21,6 +21,9 @@ initSentry();
 
 const app = express();
 
+// Enable trust proxy for Render deployment
+app.set('trust proxy', true);
+
 // Get logger from container
 const logger = container.get('logger');
 
