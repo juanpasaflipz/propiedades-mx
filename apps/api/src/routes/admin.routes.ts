@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { container } from '../container';
 import { AdminController } from '../controllers/admin.controller';
 import { requireAdmin } from '../middleware/auth';
 
 const router = Router();
-const adminController = new AdminController();
+const adminController = container.get<AdminController>('adminController');
 
 // Apply admin authentication to all routes
 router.use(requireAdmin);

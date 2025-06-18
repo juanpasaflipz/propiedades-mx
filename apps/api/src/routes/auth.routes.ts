@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
+import { container } from '../container';
 import { AuthService } from '../services/auth.service';
 import { validateBody } from '../middleware/validation';
 import { LoginSchema, RegisterSchema } from '../validation/schemas';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
-const authService = new AuthService();
+const authService = container.get<AuthService>('authService');
 
 // Login endpoint
 router.post('/login', validateBody(LoginSchema), async (req: Request, res: Response) => {

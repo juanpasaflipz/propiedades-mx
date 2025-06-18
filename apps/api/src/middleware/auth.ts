@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { container } from '../container';
 import { AuthService } from '../services/auth.service';
 import { env } from '../config/env';
 
@@ -15,7 +16,7 @@ declare global {
   }
 }
 
-const authService = new AuthService();
+const authService = container.get<AuthService>('authService');
 
 // Middleware to require authentication
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {

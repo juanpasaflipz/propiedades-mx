@@ -32,7 +32,7 @@ export class PropertyService {
       bedrooms: row.bedrooms || 0,
       bathrooms: row.bathrooms || 0,
       area_sqm: row.area_sqm ? parseFloat(row.area_sqm) : 0,
-      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : null,
+      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : 0,
       amenities: row.amenities || [],
       images: row.images || [],
       description: row.description || row.title || '',

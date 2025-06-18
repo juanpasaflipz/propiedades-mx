@@ -176,11 +176,13 @@ export class AdminController {
         adminId: req.user?.id
       });
 
-      const status = await this.apiMonitorService.getScraperStatus();
+      // TODO: Implement getScraperStatus in ApiMonitorService
+      // const status = await this.apiMonitorService.getScraperStatus();
       
       res.json({ 
-        scrapers: status,
-        success: true
+        scrapers: [],
+        success: true,
+        message: 'Scraper status endpoint not yet implemented'
       });
 
     } catch (error) {
