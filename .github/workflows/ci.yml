@@ -122,7 +122,7 @@ jobs:
       run: npm audit --audit-level=moderate
 
     - name: Run SAST scan
-      uses: github/super-linter@v5
+      uses: github/super-linter@v7
       env:
         DEFAULT_BRANCH: main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
