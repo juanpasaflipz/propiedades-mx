@@ -11,6 +11,7 @@ const pool = new Pool({
 
 async function runMigrations() {
   console.log('🔄 Running database migrations...');
+  console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
   
   const migrationsDir = path.join(__dirname, '../src/db/migrations');
   

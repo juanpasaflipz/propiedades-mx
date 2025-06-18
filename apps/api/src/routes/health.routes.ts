@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { container } from '../container';
 import { env } from '../config/env';
+import { Pool } from 'pg';
 
 const router = Router();
 
@@ -80,6 +81,29 @@ router.get('/api/health', async (req: Request, res: Response) => {
   
   const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
   res.status(statusCode).json(healthStatus);
+});
+
+// Database columns check
+router.get('/api/db-columns', async (req: Request, res: Response) => {
+  const pool = container.get('pool') as Pool;
+  try {
+    const result = await pool.query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'properties'
+      ORDER BY ordinal_position
+    `);
+    
+    res.json({
+      status: 'ok',
+      columns: result.rows
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message
+    });
+  }
 });
 
 // Container test endpoint
