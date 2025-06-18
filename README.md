@@ -1,5 +1,7 @@
 # Real Estate Aggregator MX
 
+Stabilized v1 — production-grade base with full testing, auth, CI/CD, monitoring, validation, and scraper hardening. Ready for user onboarding and scaling.
+
 Consolidated Mexican Real Estate Aggregator platform combining the best features from multiple repositories.
 
 ## Project Structure
