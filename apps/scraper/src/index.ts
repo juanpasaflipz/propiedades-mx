@@ -8,6 +8,7 @@ dotenv.config();
 
 // Import scrapers
 import { ScrapeDoScraper } from './scrapers/scrapedo-scraper';
+import { EnhancedScrapeDoScraper } from './scrapers/enhanced-scrapedo-scraper';
 
 // Initialize database
 const dbConfig: DatabaseConfig = {
@@ -41,6 +42,25 @@ async function runScrapeDoScraper() {
   }
 }
 
+async function runEnhancedScraper() {
+  console.log('Starting Enhanced Scrape.do scraper...');
+  try {
+    const scraper = new EnhancedScrapeDoScraper();
+    
+    // Test connection first
+    const connected = await scraper.testConnection();
+    if (!connected) {
+      console.error('Failed to connect to Scrape.do API. Please check your API key.');
+      return;
+    }
+    
+    await scraper.scrape();
+    console.log('Enhanced Scrape.do scraper completed successfully');
+  } catch (error) {
+    console.error('Enhanced Scrape.do scraper failed:', error);
+  }
+}
+
 async function runAllScrapers() {
   console.log('Running Scrape.do scraper...');
   await runScrapeDoScraper();
@@ -69,6 +89,7 @@ process.on('SIGINT', async () => {
 // Export for manual execution
 export {
   runScrapeDoScraper,
+  runEnhancedScraper,
   runAllScrapers,
 };
 
@@ -79,6 +100,9 @@ if (require.main === module) {
   switch (scraper) {
     case 'scrapedo':
       runScrapeDoScraper();
+      break;
+    case 'enhanced':
+      runEnhancedScraper();
       break;
     case 'test':
       // Just test the connection
