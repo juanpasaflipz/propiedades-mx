@@ -15,6 +15,11 @@ import { adminRoutes } from './routes/admin.routes';
 import { aiRoutes } from './routes/ai.routes';
 import { authRoutes } from './routes/auth.routes';
 import { healthRoutes } from './routes/health.routes';
+import { createAIEnhancedRoutes } from './routes/ai-enhanced.routes';
+
+// Import workers
+import { createEmbeddingWorker } from './workers/embedding-worker';
+import { createSummaryWorker } from './workers/summary-worker';
 
 // Initialize Sentry before creating Express app
 initSentry();
@@ -131,6 +136,10 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 
+// Enhanced AI routes with RAG
+const pool = container.get('pool');
+app.use('/api/ai/v2', createAIEnhancedRoutes(pool, logger));
+
 // Debug routes (only in development)
 if (env.NODE_ENV !== 'production') {
   const { createDebugRoutes } = require('./routes/debug.routes');
@@ -198,6 +207,25 @@ const server = app.listen(port, '0.0.0.0', () => {
     nodeVersion: process.version,
     pid: process.pid
   });
+
+  // Start background workers in production
+  if (env.NODE_ENV === 'production' || process.env.ENABLE_WORKERS === 'true') {
+    logger.info('Starting background workers');
+    
+    const embeddingWorker = createEmbeddingWorker(pool, logger);
+    const summaryWorker = createSummaryWorker(pool, logger);
+    
+    embeddingWorker.start().catch(error => {
+      logger.error('Failed to start embedding worker', error);
+    });
+    
+    summaryWorker.start().catch(error => {
+      logger.error('Failed to start summary worker', error);
+    });
+    
+    // Store workers for graceful shutdown
+    (global as any).workers = { embeddingWorker, summaryWorker };
+  }
 });
 
 // Graceful shutdown
@@ -208,6 +236,14 @@ async function gracefulShutdown(signal: string) {
   server.close(() => {
     logger.info('HTTP server closed');
   });
+
+  // Stop workers if running
+  const workers = (global as any).workers;
+  if (workers) {
+    logger.info('Stopping background workers');
+    workers.embeddingWorker?.stop();
+    workers.summaryWorker?.stop();
+  }
 
   // Close database connections
   try {
