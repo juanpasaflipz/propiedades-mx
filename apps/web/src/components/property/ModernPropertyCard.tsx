@@ -139,7 +139,7 @@ export function ModernPropertyCard({
         )}
 
         {/* View on Hover */}
-        <Link href={`/properties/${id}`}>
+        <Link href={`/property/${id}`}>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
             <motion.div
               initial={{ opacity: 0, scale: 0 }}
@@ -175,7 +175,7 @@ export function ModernPropertyCard({
           transition={{ delay: 0.3 }}
           className="text-xl font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors"
         >
-          <Link href={`/properties/${id}`}>{title}</Link>
+          <Link href={`/property/${id}`}>{title}</Link>
         </motion.h3>
 
         {/* Location */}
