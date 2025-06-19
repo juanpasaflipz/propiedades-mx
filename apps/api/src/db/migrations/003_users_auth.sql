@@ -82,7 +82,7 @@ INSERT INTO users (email, name, password, role, email_verified)
 VALUES (
   'admin@realestate.mx',
   'Admin User',
-  '$2a$10$XZp1J5.QWGaH8YfxQx6e7.hEGQx4GWPqKqT3aVqMqDcKxNH6XsW8a',
+  '$2b$10$F/B3khStv2.U7VanHGVr5OpjydhGrzdQB83Axw8a2UCT0yKaghiXK',
   'admin',
   CURRENT_TIMESTAMP
 ) ON CONFLICT (email) DO NOTHING;

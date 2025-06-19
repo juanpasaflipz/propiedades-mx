@@ -60,13 +60,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password
       });
 
-      const { token, user } = response.data;
+      const { accessToken, refreshToken, user } = response.data;
       
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
       setUser(user);
       
       // Set default auth header for axios
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
       // Redirect based on role
       if (user.role === 'admin') {
@@ -87,13 +88,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name
       });
 
-      const { token, user } = response.data;
+      const { accessToken, refreshToken, user } = response.data;
       
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
       setUser(user);
       
       // Set default auth header for axios
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
       router.push('/properties');
     } catch (error: any) {
@@ -103,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     router.push('/');
