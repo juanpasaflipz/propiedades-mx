@@ -11,7 +11,9 @@ router.get('/health', (req: Request, res: Response) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: env.NODE_ENV
+    environment: env.NODE_ENV,
+    deployedAt: '2024-01-19T16:45:00Z', // Update this with each deployment
+    version: '1.0.1'
   });
 });
 
