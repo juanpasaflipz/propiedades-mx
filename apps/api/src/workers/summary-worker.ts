@@ -165,13 +165,14 @@ export class SummaryWorker {
         GROUP BY property_type
       `,
       
-      // Price stats (handling string prices)
+      // Price stats
       prices: `
         SELECT 
-          price,
+          price_amount,
+          price_currency,
           transaction_type
         FROM properties
-        WHERE LOWER(city) = LOWER($1) AND price IS NOT NULL
+        WHERE LOWER(city) = LOWER($1) AND price_amount IS NOT NULL
       `
     };
 
@@ -183,9 +184,8 @@ export class SummaryWorker {
 
     // Parse prices
     const prices = pricesResult.rows.map(row => {
-      const numStr = row.price.replace(/[^0-9.]/g, '');
       return {
-        amount: parseFloat(numStr) || 0,
+        amount: parseFloat(row.price_amount) || 0,
         type: row.transaction_type || 'sale'
       };
     }).filter(p => p.amount > 0);

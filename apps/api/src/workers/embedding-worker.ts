@@ -96,7 +96,7 @@ export class EmbeddingWorker {
         FROM properties p
         INNER JOIN property_embeddings pe ON p.id::varchar = pe.property_id
         WHERE p.updated_at > pe.updated_at
-        OR p.last_seen_at > pe.updated_at
+        OR p.last_updated > pe.updated_at
         LIMIT $1
       `;
       
@@ -165,41 +165,35 @@ export class EmbeddingWorker {
    * Map database row to Property object (same as in property service)
    */
   private mapDbRowToProperty(row: any): Property {
-    const parsePrice = (priceStr: string | null): number => {
-      if (!priceStr) return 0;
-      const numStr = priceStr.replace(/[^0-9.]/g, '');
-      return parseFloat(numStr) || 0;
-    };
-
     return {
       id: row.id.toString(),
       source: row.source,
       country: row.country || 'Mexico',
-      state_province: row.state || '',
+      state_province: row.state_province || '',
       city: row.city || '',
-      neighborhood: '',
-      postal_code: '',
-      address: row.location || '',
+      neighborhood: row.neighborhood || '',
+      postal_code: row.postal_code || '',
+      address: row.address || '',
       coordinates: {
-        lat: 0,
-        lng: 0
+        lat: parseFloat(row.coordinates_lat) || 0,
+        lng: parseFloat(row.coordinates_lng) || 0
       },
-      transaction_type: 'sale',
+      transaction_type: row.transaction_type || 'sale',
       price: {
-        amount: parsePrice(row.price),
-        currency: row.currency || 'MXN'
+        amount: parseFloat(row.price_amount) || 0,
+        currency: row.price_currency || 'MXN'
       },
       property_type: row.property_type || 'house',
       bedrooms: row.bedrooms || 0,
       bathrooms: row.bathrooms || 0,
-      area_sqm: 0,
-      lot_size_sqm: 0,
-      amenities: [],
-      images: row.image_url ? [row.image_url] : [],
-      description: row.description || row.title || '',
-      contact_info: row.link || '',
-      listing_date: row.created_at || new Date().toISOString(),
-      last_updated: row.updated_at || row.last_seen_at || new Date().toISOString()
+      area_sqm: parseFloat(row.area_sqm) || 0,
+      lot_size_sqm: parseFloat(row.lot_size_sqm) || 0,
+      amenities: row.amenities || [],
+      images: row.images || [],
+      description: row.description || '',
+      contact_info: row.contact_info || '',
+      listing_date: row.listing_date || new Date().toISOString(),
+      last_updated: row.last_updated || new Date().toISOString()
     };
   }
 
