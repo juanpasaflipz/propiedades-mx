@@ -49,10 +49,10 @@ async function runAllScrapers() {
 
 // Schedule scrapers
 if (process.env.ENABLE_SCHEDULED_SCRAPING === 'true') {
-  // Run Scrape.do scraper every 4 hours
-  cron.schedule('0 */4 * * *', runScrapeDoScraper);
+  // Run Scrape.do scraper every 8 hours
+  cron.schedule('0 */8 * * *', runScrapeDoScraper);
   
-  console.log('Scheduled scraping enabled - running every 4 hours');
+  console.log('Scheduled scraping enabled - running every 8 hours');
   
   // Also run immediately on startup
   runScrapeDoScraper();
