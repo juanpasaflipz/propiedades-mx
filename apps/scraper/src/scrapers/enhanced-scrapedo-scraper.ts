@@ -200,8 +200,8 @@ export class EnhancedScrapeDoScraper {
   private extractPropertyFromElement($: cheerio.CheerioAPI, element: cheerio.Element): Property | null {
     const $el = $(element);
     
-    // Extract title
-    const title = $el.find('.ui-search-item__title, .ui-search-result__content-title, h2').first().text().trim();
+    // Extract title - updated selectors for new structure
+    const title = $el.find('.poly-component__title, .ui-search-item__title, .ui-search-result__content-title, h3 a').first().text().trim();
     if (!title) return null;
 
     // Extract link
@@ -212,21 +212,21 @@ export class EnhancedScrapeDoScraper {
     const idMatch = href.match(/MLM-(\d+)/);
     const externalId = idMatch ? `MLM-${idMatch[1]}` : `ml-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Extract price
-    const priceText = $el.find('.price-tag-text-sr-only, .andes-money-amount__fraction, .price__fraction').first().text().trim();
+    // Extract price - updated for new structure
+    const priceText = $el.find('.andes-money-amount__fraction, .poly-price__current, .price-tag-text-sr-only, .price__fraction').first().text().trim();
     const priceMatch = priceText.match(/[\d,]+/);
     const price = priceMatch ? priceMatch[0].replace(/,/g, '') : '0';
     
-    // Extract location
-    const location = $el.find('.ui-search-item__location, .ui-search-result__content-location').text().trim() || 'Mexico';
+    // Extract location - updated for new structure
+    const location = $el.find('.poly-component__location, .ui-search-item__location, .ui-search-result__content-location').text().trim() || 'Mexico';
     
     // Extract city and state from location
     const locationParts = location.split(',').map(p => p.trim());
     const city = locationParts[0] || 'Unknown';
     const state = locationParts[1] || 'Mexico';
     
-    // Extract attributes
-    const attributes = $el.find('.ui-search-item__attributes li, .ui-search-result__content-attributes li').map((_, attr) => 
+    // Extract attributes - updated for new structure
+    const attributes = $el.find('.poly-attributes_list__item, .ui-search-item__attributes li, .ui-search-result__content-attributes li').map((_, attr) => 
       $(attr).text().trim()
     ).get();
     
@@ -302,7 +302,7 @@ export class EnhancedScrapeDoScraper {
             currency = $4,
             location = $5,
             city = $6,
-            state_province = $7,
+            state = $7,
             bedrooms = $8,
             bathrooms = $9,
             area_sqm = $10,
@@ -310,28 +310,22 @@ export class EnhancedScrapeDoScraper {
             link = $12,
             description = $13,
             source = $14,
-            last_seen_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
+            last_seen_at = CURRENT_TIMESTAMP
           WHERE id = $1
           RETURNING id` :
           // Insert new property
           `INSERT INTO properties (
-            external_id, title, price, currency, location, city, state_province,
+            external_id, title, price, currency, location, city, state,
             bedrooms, bathrooms, area_sqm, property_type, link, description, source,
-            country, address, coordinates_lat, coordinates_lng, 
-            transaction_type, price_amount, price_currency,
-            lot_size_sqm, amenities, images, contact_info,
-            listing_date, last_updated
+            country, created_at, last_seen_at
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-            'Mexico', $5, 0, 0, 'sale', $3::numeric, $4,
-            0, '{}', '{}', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            'Mexico', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
           )
           ON CONFLICT (external_id) DO UPDATE SET
             title = EXCLUDED.title,
             price = EXCLUDED.price,
-            price_amount = EXCLUDED.price_amount,
-            last_updated = CURRENT_TIMESTAMP
+            last_seen_at = CURRENT_TIMESTAMP
           RETURNING id`;
 
         const values = propertyId ?
