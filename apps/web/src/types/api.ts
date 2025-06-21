@@ -7,6 +7,7 @@ export interface SearchFilters {
   propertyType?: string;
   minBedrooms?: number;
   minBathrooms?: number;
+  area?: string;
 }
 
 export interface PropertyListing {

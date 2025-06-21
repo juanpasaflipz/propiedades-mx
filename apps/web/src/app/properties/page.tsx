@@ -34,10 +34,10 @@ export default function PropertiesPage() {
   const loadProperties = async () => {
     setLoading(true);
     try {
-      const results = await propertyProvider.searchProperties(activeFilters);
+      const results = await propertyProvider.searchProperties(activeFilters, 1, 50);
       
       // Sort properties
-      let sorted = [...results];
+      let sorted = [...results.listings];
       switch (sortBy) {
         case 'price-asc':
           sorted.sort((a, b) => a.price - b.price);

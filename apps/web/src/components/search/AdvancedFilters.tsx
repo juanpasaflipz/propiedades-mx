@@ -221,12 +221,12 @@ export function AdvancedFilters({ onFiltersChange, onClose, isOpen = true }: Adv
               <CardContent className="space-y-4">
                 <div>
                   <Label>City</Label>
-                  <Select value={filters.city} onValueChange={(value) => updateFilter('city', value)}>
+                  <Select value={filters.city || 'all'} onValueChange={(value) => updateFilter('city', value === 'all' ? '' : value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a city" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Cities</SelectItem>
+                      <SelectItem value="all">All Cities</SelectItem>
                       {popularCities.map(city => (
                         <SelectItem key={city} value={city}>{city}</SelectItem>
                       ))}
