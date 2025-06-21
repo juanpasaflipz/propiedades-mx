@@ -1,12 +1,9 @@
-import { Metadata } from 'next';
+'use client';
+
 import { Suspense } from 'react';
 import { SemanticPropertySearch } from '@/components/SemanticPropertySearch';
 import { Sparkles, Brain, Zap, Target, Loader2 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Búsqueda Semántica con IA | Propiedades MX',
-  description: 'Encuentra propiedades usando lenguaje natural y búsqueda semántica potenciada por IA',
-};
 
 export default function SemanticSearchDemoPage() {
   return (
