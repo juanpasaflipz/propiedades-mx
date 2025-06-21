@@ -63,9 +63,43 @@ app.use(helmet({
 app.use(compression());
 
 // CORS configuration
+const getAllowedOrigins = () => {
+  const origins = [env.FRONTEND_URL];
+  
+  // Add additional origins from ALLOWED_ORIGINS env var
+  if (env.ALLOWED_ORIGINS) {
+    const additionalOrigins = env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim());
+    origins.push(...additionalOrigins);
+  }
+  
+  // Always allow Vercel preview deployments in production
+  if (env.NODE_ENV === 'production') {
+    origins.push(/^https:\/\/propiedades-mx-.*\.vercel\.app$/);
+  }
+  
+  return origins;
+};
+
 const corsOptions = {
   origin: env.NODE_ENV === 'production' 
-    ? env.FRONTEND_URL
+    ? (origin, callback) => {
+        const allowedOrigins = getAllowedOrigins();
+        
+        // Check if origin matches any allowed origin
+        const isAllowed = !origin || allowedOrigins.some(allowed => {
+          if (allowed instanceof RegExp) {
+            return allowed.test(origin);
+          }
+          return allowed === origin;
+        });
+        
+        if (isAllowed) {
+          callback(null, true);
+        } else {
+          logger.warn('CORS blocked origin', { origin, allowedOrigins });
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
     : true, // Allow all origins in development
   credentials: true,
   optionsSuccessStatus: 200,

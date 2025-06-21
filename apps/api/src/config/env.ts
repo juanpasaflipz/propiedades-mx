@@ -27,6 +27,7 @@ const envSchema = z.object({
   
   // Frontend
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+  ALLOWED_ORIGINS: z.string().optional(), // Comma-separated list of allowed origins
   
   // Redis (optional)
   REDIS_URL: z.string().url().optional(),
