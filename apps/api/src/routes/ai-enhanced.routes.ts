@@ -4,6 +4,7 @@ import { validateBody } from '../middleware/validation';
 import { getPropertyEnhancedService } from '../services/property-enhanced.service';
 import { getEmbeddingService } from '../services/embedding.service';
 import { getOpenAIService } from '../services/openai.service';
+import { llmReRankingService } from '../services/llm-reranking.service';
 import { Logger } from '../utils/logger';
 import { z } from 'zod';
 
@@ -20,7 +21,9 @@ const SemanticSearchSchema = z.object({
     maxBedrooms: z.number().optional(),
   }).optional(),
   limit: z.number().min(1).max(50).default(20),
-  includeExplanation: z.boolean().default(false)
+  includeExplanation: z.boolean().default(false),
+  useLLMReranking: z.boolean().default(true),
+  language: z.enum(['es', 'en']).default('es')
 });
 
 const SimilarPropertiesSchema = z.object({
@@ -51,27 +54,92 @@ export function createAIEnhancedRoutes(pool: Pool, logger: Logger): Router {
    */
   router.post('/semantic-search', validateBody(SemanticSearchSchema), async (req: Request, res: Response) => {
     try {
-      const { query, filters, limit, includeExplanation } = req.body;
+      const { query, filters, limit, includeExplanation, useLLMReranking, language } = req.body;
       
-      logger.info('Semantic search request', { query, filters });
+      logger.info('Semantic search request', { query, filters, useLLMReranking });
 
+      // First, get semantic search results
       const results = await propertyService.semanticSearch({
         query,
         filters,
-        limit,
+        limit: useLLMReranking ? limit * 2 : limit, // Get more results if re-ranking
         includeExplanation
       });
 
-      res.json({
-        success: true,
-        ...results
-      });
+      // Apply LLM re-ranking if enabled
+      if (useLLMReranking && results.properties.length > 0) {
+        const properties = results.properties.map(p => p.property);
+        
+        const rankedProperties = await llmReRankingService.reRankProperties({
+          query,
+          properties,
+          maxResults: limit,
+          includeReasons: includeExplanation,
+          language
+        });
+
+        // Map back to the original format with scores and reasons
+        const reRankedResults = rankedProperties.map(rankedProp => {
+          const original = results.properties.find(p => p.property.id === rankedProp.id);
+          return {
+            property: rankedProp,
+            score: rankedProp.relevanceScore,
+            explanation: includeExplanation ? rankedProp.matchReason : undefined,
+            distance: original?.distance
+          };
+        });
+
+        res.json({
+          success: true,
+          properties: reRankedResults,
+          searchContext: {
+            ...results.searchContext,
+            llmReranked: true,
+            language
+          }
+        });
+      } else {
+        res.json({
+          success: true,
+          ...results
+        });
+      }
 
     } catch (error) {
       logger.error('Semantic search error', error);
       res.status(500).json({
         success: false,
         error: 'Failed to perform semantic search'
+      });
+    }
+  });
+
+  /**
+   * Enhance search query with context and user preferences
+   */
+  router.post('/enhance-query', async (req: Request, res: Response) => {
+    try {
+      const { query, userPreferences } = req.body;
+      
+      logger.info('Enhance query request', { query });
+
+      const enhancedQuery = await llmReRankingService.enhanceSearchWithContext(
+        query,
+        userPreferences
+      );
+
+      res.json({
+        success: true,
+        originalQuery: query,
+        enhancedQuery,
+        userPreferences
+      });
+
+    } catch (error) {
+      logger.error('Enhance query error', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to enhance search query'
       });
     }
   });
@@ -306,6 +374,109 @@ export function createAIEnhancedRoutes(pool: Pool, logger: Logger): Router {
       res.status(500).json({
         success: false,
         error: 'Failed to generate description'
+      });
+    }
+  });
+
+  /**
+   * Manually generate embeddings for properties
+   */
+  router.post('/generate-embeddings', async (req: Request, res: Response) => {
+    try {
+      const { propertyIds, regenerate = false } = req.body;
+      
+      logger.info('Manual embedding generation request', { 
+        propertyIds: propertyIds?.length || 'all',
+        regenerate 
+      });
+
+      const embeddingService = getEmbeddingService();
+      let properties: Property[] = [];
+
+      if (propertyIds && propertyIds.length > 0) {
+        // Generate embeddings for specific properties
+        properties = await Promise.all(
+          propertyIds.map((id: string) => propertyService.getPropertyById(id))
+        );
+        properties = properties.filter(p => p !== null);
+      } else {
+        // Get all properties without embeddings or regenerate all
+        const query = regenerate 
+          ? 'SELECT * FROM properties WHERE active = true ORDER BY created_at DESC'
+          : `SELECT p.* FROM properties p 
+             LEFT JOIN property_embeddings pe ON p.id = pe.property_id 
+             WHERE p.active = true AND pe.property_id IS NULL 
+             ORDER BY p.created_at DESC`;
+        
+        const result = await pool.query(query);
+        properties = result.rows;
+      }
+
+      logger.info(`Generating embeddings for ${properties.length} properties`);
+
+      // Generate embeddings in batches
+      const embeddings = await embeddingService.generateBatchEmbeddings(properties);
+      
+      // Store embeddings in database
+      let successCount = 0;
+      for (const [propertyId, embedding] of embeddings) {
+        try {
+          await pool.query(
+            `INSERT INTO property_embeddings (property_id, embedding, created_at, updated_at)
+             VALUES ($1, $2, NOW(), NOW())
+             ON CONFLICT (property_id) 
+             DO UPDATE SET embedding = $2, updated_at = NOW()`,
+            [propertyId, JSON.stringify(embedding)]
+          );
+          successCount++;
+        } catch (error) {
+          logger.error(`Failed to store embedding for property ${propertyId}`, error);
+        }
+      }
+
+      res.json({
+        success: true,
+        totalProperties: properties.length,
+        embeddingsGenerated: successCount,
+        message: `Successfully generated ${successCount} embeddings`
+      });
+
+    } catch (error) {
+      logger.error('Generate embeddings error', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate embeddings'
+      });
+    }
+  });
+
+  /**
+   * Get embedding statistics
+   */
+  router.get('/embedding-stats', async (req: Request, res: Response) => {
+    try {
+      const stats = await pool.query(`
+        SELECT 
+          COUNT(DISTINCT p.id) as total_properties,
+          COUNT(DISTINCT pe.property_id) as properties_with_embeddings,
+          COUNT(DISTINCT p.id) - COUNT(DISTINCT pe.property_id) as properties_without_embeddings,
+          MIN(pe.created_at) as oldest_embedding,
+          MAX(pe.created_at) as newest_embedding
+        FROM properties p
+        LEFT JOIN property_embeddings pe ON p.id = pe.property_id
+        WHERE p.active = true
+      `);
+
+      res.json({
+        success: true,
+        stats: stats.rows[0]
+      });
+
+    } catch (error) {
+      logger.error('Embedding stats error', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get embedding statistics'
       });
     }
   });

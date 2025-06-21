@@ -20,6 +20,7 @@ interface SemanticSearchResult {
     explanation?: string;
   }>;
   searchContext?: string;
+  detectedLanguage?: 'es' | 'en';
 }
 
 export class PropertyEnhancedService extends PropertyService {
@@ -37,12 +38,15 @@ export class PropertyEnhancedService extends PropertyService {
     this.logger.info('Starting semantic search', { query, filters });
 
     try {
-      // 1. Parse natural language query to extract structured filters
+      // 1. Detect language from query
+      const language = getEmbeddingService().detectLanguage(query);
+      
+      // 2. Parse natural language query to extract structured filters
       const parsedFilters = await getOpenAIService().parseSearchQuery(query);
       const combinedFilters = { ...filters, ...parsedFilters };
 
-      // 2. Generate embedding for the search query
-      const queryEmbedding = await getEmbeddingService().generateQueryEmbedding(query);
+      // 3. Generate embedding for the search query with detected language
+      const queryEmbedding = await getEmbeddingService().generateQueryEmbedding(query, language);
 
       // 3. Find similar properties using vector search
       const similarProperties = await this.findSimilarPropertiesByEmbedding(
@@ -96,7 +100,8 @@ export class PropertyEnhancedService extends PropertyService {
 
       return {
         properties: validResults,
-        searchContext: await this.generateSearchContext(query, combinedFilters, validResults.length)
+        searchContext: await this.generateSearchContext(query, combinedFilters, validResults.length),
+        detectedLanguage: language
       };
     } catch (error) {
       this.logger.error('Semantic search failed', error);

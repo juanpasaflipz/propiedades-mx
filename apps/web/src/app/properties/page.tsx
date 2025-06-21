@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Search, Filter, X, Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
 import { NaturalLanguageSearch } from '@/components/search/NaturalLanguageSearch';
+import { SemanticPropertySearch } from '@/components/SemanticPropertySearch';
 import { AdvancedFilters } from '@/components/search/AdvancedFilters';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ export default function PropertiesPage() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'newest'>('newest');
+  const [useSemanticSearch, setUseSemanticSearch] = useState(false);
 
   const propertyProvider = new PropertyProvider();
 
@@ -150,10 +152,38 @@ export default function PropertiesPage() {
               </div>
 
               {/* Search Bar */}
-              <div className="max-w-2xl mx-auto w-full">
-                <NaturalLanguageSearch
-                  onSearch={handleAISearch}
-                />
+              <div className="max-w-2xl mx-auto w-full space-y-4">
+                {/* Search Type Toggle */}
+                <div className="flex justify-center gap-2">
+                  <Button
+                    variant={!useSemanticSearch ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseSemanticSearch(false)}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Búsqueda Normal
+                  </Button>
+                  <Button
+                    variant={useSemanticSearch ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUseSemanticSearch(true)}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Búsqueda Semántica IA
+                  </Button>
+                </div>
+                
+                {/* Search Component */}
+                {useSemanticSearch ? (
+                  <SemanticPropertySearch
+                    onSearchComplete={setProperties}
+                    showResults={false}
+                  />
+                ) : (
+                  <NaturalLanguageSearch
+                    onSearch={handleAISearch}
+                  />
+                )}
               </div>
 
               {/* Active Filters */}

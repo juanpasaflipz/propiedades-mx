@@ -27,17 +27,19 @@ export class EmbeddingService {
   /**
    * Generate embedding for a property listing
    */
-  async generatePropertyEmbedding(property: Property): Promise<number[]> {
-    const text = this.createPropertyText(property);
+  async generatePropertyEmbedding(property: Property, language: 'es' | 'en' = 'es'): Promise<number[]> {
+    const text = this.createPropertyText(property, language);
     return this.embedText(text);
   }
 
   /**
    * Generate embedding for a search query
    */
-  async generateQueryEmbedding(query: string): Promise<number[]> {
+  async generateQueryEmbedding(query: string, language: 'es' | 'en' = 'es'): Promise<number[]> {
     // Enhance query with context for better matching
-    const enhancedQuery = `Busco propiedad: ${query}`;
+    const enhancedQuery = language === 'es' 
+      ? `Busco propiedad: ${query}`
+      : `Looking for property: ${query}`;
     return this.embedText(enhancedQuery);
   }
 
@@ -70,33 +72,63 @@ export class EmbeddingService {
   /**
    * Create text representation of property for embedding
    */
-  private createPropertyText(property: Property): string {
+  private createPropertyText(property: Property, language: 'es' | 'en' = 'es'): string {
     const parts: string[] = [];
 
-    // Location information
-    parts.push(`${property.property_type} en ${property.neighborhood}, ${property.city}`);
-    
-    // Property characteristics
-    parts.push(`${property.bedrooms} recámaras, ${property.bathrooms} baños`);
-    
-    // Size
-    if (property.area_sqm > 0) {
-      parts.push(`${property.area_sqm} metros cuadrados`);
-    }
-    
-    // Transaction type and price
-    const transactionType = property.transaction_type === 'rent' ? 'renta' : 'venta';
-    parts.push(`En ${transactionType} por $${property.price.amount.toLocaleString()} ${property.price.currency}`);
-    
-    // Amenities
-    if (property.amenities && property.amenities.length > 0) {
-      parts.push(`Amenidades: ${property.amenities.join(', ')}`);
-    }
-    
-    // Description (truncated to avoid token limits)
-    if (property.description) {
-      const truncatedDescription = property.description.slice(0, 500);
-      parts.push(`Descripción: ${truncatedDescription}`);
+    if (language === 'es') {
+      // Spanish version
+      // Location information
+      parts.push(`${property.property_type} en ${property.neighborhood}, ${property.city}`);
+      
+      // Property characteristics
+      parts.push(`${property.bedrooms} recámaras, ${property.bathrooms} baños`);
+      
+      // Size
+      if (property.area_sqm > 0) {
+        parts.push(`${property.area_sqm} metros cuadrados`);
+      }
+      
+      // Transaction type and price
+      const transactionType = property.transaction_type === 'rent' ? 'renta' : 'venta';
+      parts.push(`En ${transactionType} por $${property.price.amount.toLocaleString()} ${property.price.currency}`);
+      
+      // Amenities
+      if (property.amenities && property.amenities.length > 0) {
+        parts.push(`Amenidades: ${property.amenities.join(', ')}`);
+      }
+      
+      // Description (truncated to avoid token limits)
+      if (property.description) {
+        const truncatedDescription = property.description.slice(0, 500);
+        parts.push(`Descripción: ${truncatedDescription}`);
+      }
+    } else {
+      // English version
+      // Location information
+      parts.push(`${property.property_type} in ${property.neighborhood}, ${property.city}`);
+      
+      // Property characteristics
+      parts.push(`${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms`);
+      
+      // Size
+      if (property.area_sqm > 0) {
+        parts.push(`${property.area_sqm} square meters`);
+      }
+      
+      // Transaction type and price
+      const transactionType = property.transaction_type === 'rent' ? 'rent' : 'sale';
+      parts.push(`For ${transactionType} at $${property.price.amount.toLocaleString()} ${property.price.currency}`);
+      
+      // Amenities
+      if (property.amenities && property.amenities.length > 0) {
+        parts.push(`Amenities: ${property.amenities.join(', ')}`);
+      }
+      
+      // Description (truncated to avoid token limits)
+      if (property.description) {
+        const truncatedDescription = property.description.slice(0, 500);
+        parts.push(`Description: ${truncatedDescription}`);
+      }
     }
 
     return parts.join('. ');
@@ -155,6 +187,40 @@ export class EmbeddingService {
       .replace(/\s+/g, ' ')
       .toLowerCase()
       .slice(0, 8000); // Limit text length for embedding model
+  }
+
+  /**
+   * Detect language of text (simple heuristic)
+   */
+  detectLanguage(text: string): 'es' | 'en' {
+    const spanishKeywords = [
+      'casa', 'departamento', 'terreno', 'oficina', 'local',
+      'recámara', 'baño', 'cocina', 'jardín', 'alberca',
+      'cerca', 'busco', 'quiero', 'necesito', 'con', 'sin',
+      'zona', 'colonia', 'fraccionamiento', 'precio', 'renta',
+      'venta', 'metros', 'cuadrados', 'habitaciones'
+    ];
+    
+    const englishKeywords = [
+      'house', 'apartment', 'condo', 'office', 'land',
+      'bedroom', 'bathroom', 'kitchen', 'garden', 'pool',
+      'near', 'looking', 'want', 'need', 'with', 'without',
+      'area', 'neighborhood', 'price', 'rent', 'sale',
+      'square', 'feet', 'meters', 'rooms'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    
+    const spanishScore = spanishKeywords.filter(keyword => 
+      lowerText.includes(keyword)
+    ).length;
+    
+    const englishScore = englishKeywords.filter(keyword => 
+      lowerText.includes(keyword)
+    ).length;
+    
+    // Default to Spanish for Mexican real estate market
+    return spanishScore >= englishScore ? 'es' : 'en';
   }
 
   /**
