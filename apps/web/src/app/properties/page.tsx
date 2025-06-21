@@ -36,6 +36,13 @@ function PropertiesContent() {
     try {
       const results = await propertyProvider.searchProperties(activeFilters, 1, 50);
       
+      // Ensure we have a valid response with listings array
+      if (!results || !Array.isArray(results.listings)) {
+        console.error('Invalid response from property provider:', results);
+        setProperties([]);
+        return;
+      }
+      
       // Sort properties
       let sorted = [...results.listings];
       switch (sortBy) {
