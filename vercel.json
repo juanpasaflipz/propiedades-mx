@@ -1,6 +1,0 @@
-{
-  "buildCommand": "npm install && npx turbo build --filter=@aggregator/web",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
-}

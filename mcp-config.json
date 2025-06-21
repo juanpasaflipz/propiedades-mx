@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "postgres-propiedades": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://user:pass@host:5432/db"
+      ],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}

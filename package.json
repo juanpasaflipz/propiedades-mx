@@ -27,7 +27,6 @@
   "license": "ISC",
   "packageManager": "npm@10.2.4",
   "devDependencies": {
-    "@sentry/node": "^9.30.0",
     "@typescript-eslint/eslint-plugin": "^8.34.0",
     "@typescript-eslint/parser": "^8.34.0",
     "eslint": "^9.28.0",

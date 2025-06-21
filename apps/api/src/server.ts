@@ -17,6 +17,7 @@ import { authRoutes } from './routes/auth.routes';
 import { healthRoutes } from './routes/health.routes';
 import { createAIEnhancedRoutes } from './routes/ai-enhanced.routes';
 import mcpRoutes from './routes/mcp.routes';
+import context7Routes from './routes/context7.routes';
 
 // Import workers
 import { createEmbeddingWorker } from './workers/embedding-worker';
@@ -137,6 +138,7 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/mcp', mcpRoutes);
+app.use('/api/context7', context7Routes);
 
 // Enhanced AI routes with RAG
 const pool = container.get('pool');
