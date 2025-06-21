@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 import { mcpService } from '../services/mcp.service';
 import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
@@ -28,7 +28,7 @@ const ensureMCPConnection = async (req: any, res: any, next: any) => {
 };
 
 // Get database schema information
-router.get('/schema', authenticate, ensureMCPConnection, async (req, res, next) => {
+router.get('/schema', requireAuth, ensureMCPConnection, async (req, res, next) => {
   try {
     const schemaInfo = await mcpService.getSchemaInfo();
     res.json({
@@ -41,7 +41,7 @@ router.get('/schema', authenticate, ensureMCPConnection, async (req, res, next) 
 });
 
 // Execute a read-only query
-router.post('/query', authenticate, ensureMCPConnection, async (req, res, next) => {
+router.post('/query', requireAuth, ensureMCPConnection, async (req, res, next) => {
   try {
     const { query } = QuerySchema.parse(req.body);
     
@@ -67,7 +67,7 @@ router.post('/query', authenticate, ensureMCPConnection, async (req, res, next) 
 });
 
 // Natural language property search using MCP
-router.post('/search/natural', authenticate, ensureMCPConnection, async (req, res, next) => {
+router.post('/search/natural', requireAuth, ensureMCPConnection, async (req, res, next) => {
   try {
     const { question } = NaturalLanguageQuerySchema.parse(req.body);
     
@@ -95,7 +95,7 @@ router.post('/search/natural', authenticate, ensureMCPConnection, async (req, re
 });
 
 // Get database health metrics
-router.get('/health', authenticate, ensureMCPConnection, async (req, res, next) => {
+router.get('/health', requireAuth, ensureMCPConnection, async (req, res, next) => {
   try {
     const healthData = await mcpService.getDatabaseHealth();
     
@@ -112,7 +112,7 @@ router.get('/health', authenticate, ensureMCPConnection, async (req, res, next) 
 });
 
 // Property insights using MCP
-router.get('/insights/properties/:id', authenticate, ensureMCPConnection, async (req, res, next) => {
+router.get('/insights/properties/:id', requireAuth, ensureMCPConnection, async (req, res, next) => {
   try {
     const propertyId = parseInt(req.params.id);
     

@@ -77,11 +77,11 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = authService.verifyAccessToken(token);
+    const decoded = getAuthService().verifyAccessToken(token);
 
     if (decoded) {
       // Get user from database
-      const user = await authService.findUserById(decoded.userId);
+      const user = await getAuthService().findUserById(decoded.userId);
       
       if (user) {
         req.user = {
