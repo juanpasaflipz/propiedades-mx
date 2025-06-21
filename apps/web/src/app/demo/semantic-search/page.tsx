@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { SemanticPropertySearch } from '@/components/SemanticPropertySearch';
-import { Sparkles, Brain, Zap, Target } from 'lucide-react';
+import { Sparkles, Brain, Zap, Target, Loader2 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Búsqueda Semántica con IA | Propiedades MX',
@@ -76,10 +77,16 @@ export default function SemanticSearchDemoPage() {
 
           {/* Search Component */}
           <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100">
-            <SemanticPropertySearch 
-              showResults={true}
-              className="max-w-none"
-            />
+            <Suspense fallback={
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            }>
+              <SemanticPropertySearch 
+                showResults={true}
+                className="max-w-none"
+              />
+            </Suspense>
           </div>
         </div>
       </div>

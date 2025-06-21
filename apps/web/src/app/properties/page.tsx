@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, Loader2, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { ModernPropertyCard } from '@/components/property/ModernPropertyCard';
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { PropertyProvider } from '@/lib/property-provider';
 import { SearchFilters } from '@/types/api';
 
-export default function PropertiesPage() {
+function PropertiesContent() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -311,5 +311,17 @@ export default function PropertiesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <PropertiesContent />
+    </Suspense>
   );
 }
