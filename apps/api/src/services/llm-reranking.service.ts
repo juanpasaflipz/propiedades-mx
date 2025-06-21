@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
-import { Property } from '../types/property';
-import { logger } from '../utils/logger';
+import { Property } from '../models/property.model';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger();
 
 interface RankedProperty extends Property {
   relevanceScore: number;

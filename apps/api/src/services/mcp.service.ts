@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import logger from '../utils/logger';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger();
 import { env } from '../config/env';
 
 export interface MCPQueryResult {

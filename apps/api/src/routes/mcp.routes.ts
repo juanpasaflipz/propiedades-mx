@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
 import { mcpService } from '../services/mcp.service';
 import { AppError } from '../utils/errors';
-import logger from '../utils/logger';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger();
 
 const router = Router();
 
