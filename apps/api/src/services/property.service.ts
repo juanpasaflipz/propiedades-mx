@@ -20,19 +20,19 @@ export class PropertyService {
       postal_code: row.postal_code || '',
       address: row.address || '',
       coordinates: {
-        lat: parseFloat(row.coordinates_lat) || 0,
-        lng: parseFloat(row.coordinates_lng) || 0
+        lat: row.coordinates_lat ? parseFloat(row.coordinates_lat) : 0,
+        lng: row.coordinates_lng ? parseFloat(row.coordinates_lng) : 0
       },
       transaction_type: row.transaction_type || 'sale',
       price: {
-        amount: parseFloat(row.price_amount) || 0,
+        amount: row.price_amount ? parseFloat(row.price_amount) : 0,
         currency: row.price_currency || 'MXN'
       },
       property_type: row.property_type || 'house',
       bedrooms: row.bedrooms || 0,
       bathrooms: row.bathrooms || 0,
-      area_sqm: parseFloat(row.area_sqm) || 0,
-      lot_size_sqm: parseFloat(row.lot_size_sqm) || 0,
+      area_sqm: row.area_sqm ? parseFloat(row.area_sqm) : 0,
+      lot_size_sqm: row.lot_size_sqm ? parseFloat(row.lot_size_sqm) : null,
       amenities: row.amenities || [],
       images: row.images || [],
       description: row.description || '',
@@ -71,7 +71,7 @@ export class PropertyService {
       }
 
       if (filters.state) {
-        conditions.push(`LOWER(state) = LOWER($${paramIndex})`);
+        conditions.push(`LOWER(state_province) = LOWER($${paramIndex})`);
         params.push(filters.state);
         paramIndex++;
       }
@@ -91,8 +91,18 @@ export class PropertyService {
         paramIndex++;
       }
 
-      // Price filters - need to handle string prices
-      // Skip price filters for now since price is stored as string
+      // Price filters
+      if (filters.minPrice) {
+        conditions.push(`price_amount >= $${paramIndex}`);
+        params.push(filters.minPrice);
+        paramIndex++;
+      }
+
+      if (filters.maxPrice) {
+        conditions.push(`price_amount <= $${paramIndex}`);
+        params.push(filters.maxPrice);
+        paramIndex++;
+      }
 
       // Size filters
       if (filters.minBedrooms) {
@@ -119,7 +129,18 @@ export class PropertyService {
         paramIndex++;
       }
 
-      // Skip area filters as area_sqm doesn't exist in current schema
+      // Area filters
+      if (filters.minArea) {
+        conditions.push(`area_sqm >= $${paramIndex}`);
+        params.push(filters.minArea);
+        paramIndex++;
+      }
+
+      if (filters.maxArea) {
+        conditions.push(`area_sqm <= $${paramIndex}`);
+        params.push(filters.maxArea);
+        paramIndex++;
+      }
 
       // Build query
       let query = 'SELECT * FROM properties';
@@ -271,9 +292,9 @@ export class PropertyService {
 
   private getSortColumn(sortBy?: string): string {
     const sortMap: Record<string, string> = {
-      price: 'price',
+      price: 'price_amount',
       date: 'created_at',
-      area: 'size',
+      area: 'area_sqm',
       bedrooms: 'bedrooms'
     };
 

@@ -20,7 +20,7 @@ export interface Property {
   bedrooms: number;
   bathrooms: number;
   area_sqm: number;
-  lot_size_sqm: number;
+  lot_size_sqm: number | null;
   amenities: string[];
   images: string[];
   description: string;
