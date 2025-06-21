@@ -244,7 +244,9 @@ export class PropertyEnhancedService extends PropertyService {
     // Reuse the existing search logic but only get IDs
     const properties = await this.searchProperties({
       ...filters,
-      limit: 1000 // Get more IDs for vector filtering
+      page: 1,
+      limit: 1000, // Get more IDs for vector filtering
+      sortOrder: 'desc' as const
     });
     
     return properties.map(p => p.id);
@@ -308,7 +310,7 @@ export class PropertyEnhancedService extends PropertyService {
       Respond in the same language as the search query.
     `;
 
-    const response = await getOpenAIService().openai.chat.completions.create({
+    const response = await getOpenAIService().getOpenAIClient().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: 'You are a helpful real estate assistant.' },

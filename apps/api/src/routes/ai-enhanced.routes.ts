@@ -7,6 +7,7 @@ import { getOpenAIService } from '../services/openai.service';
 import { llmReRankingService } from '../services/llm-reranking.service';
 import { Logger } from '../utils/logger';
 import { z } from 'zod';
+import { Property } from '../models/property.model';
 
 // Validation schemas
 const SemanticSearchSchema = z.object({
@@ -218,7 +219,7 @@ export function createAIEnhancedRoutes(pool: Pool, logger: Logger): Router {
       ];
 
       // Get AI response with search intent
-      const completion = await getOpenAIService().openai.chat.completions.create({
+      const completion = await getOpenAIService().getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
         temperature: 0.7,
@@ -261,7 +262,7 @@ export function createAIEnhancedRoutes(pool: Pool, logger: Logger): Router {
         });
 
         // Generate conversational response with results
-        const responseCompletion = await getOpenAIService().openai.chat.completions.create({
+        const responseCompletion = await getOpenAIService().getOpenAIClient().chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [
             ...messages,
@@ -352,7 +353,7 @@ export function createAIEnhancedRoutes(pool: Pool, logger: Logger): Router {
         Create a compelling 2-3 paragraph description that highlights the property's best features.
       `;
 
-      const completion = await getOpenAIService().openai.chat.completions.create({
+      const completion = await getOpenAIService().getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You are a professional real estate copywriter.' },

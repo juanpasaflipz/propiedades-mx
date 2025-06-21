@@ -4,6 +4,11 @@ import { PropertySearchFilters } from '../types';
 export class OpenAIService {
   protected openai: OpenAI;
 
+  // Getter for subclasses and external access
+  public getOpenAIClient(): OpenAI {
+    return this.openai;
+  }
+
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not configured');

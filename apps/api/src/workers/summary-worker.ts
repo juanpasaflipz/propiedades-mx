@@ -285,7 +285,7 @@ export class SummaryWorker {
     `;
 
     try {
-      const response = await getOpenAIService().openai.chat.completions.create({
+      const response = await getOpenAIService().getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           {

@@ -152,11 +152,11 @@ You must respond in JSON format with the following structure:
       description: p.description,
       price: p.price,
       location: p.location,
-      propertyType: p.propertyType,
+      propertyType: p.property_type,
       bedrooms: p.bedrooms,
       bathrooms: p.bathrooms,
-      area: p.area,
-      features: p.features
+      area: p.area_sqm,
+      features: p.amenities
     }));
 
     if (language === 'es') {

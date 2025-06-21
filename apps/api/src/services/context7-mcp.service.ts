@@ -1,5 +1,3 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { container } from '../container';
 
 const logger = container.get('logger');
@@ -11,19 +9,29 @@ export interface Context7Response {
 }
 
 class Context7MCPService {
-  private client: Client | null = null;
+  private client: any = null;
   private connected = false;
+  private Client: any = null;
+  private StdioClientTransport: any = null;
 
   async connect(): Promise<void> {
     if (this.connected) return;
 
+    // Dynamic import for ES modules
+    if (!this.Client || !this.StdioClientTransport) {
+      const clientModule = await import('@modelcontextprotocol/sdk/client/index.js');
+      const stdioModule = await import('@modelcontextprotocol/sdk/client/stdio.js');
+      this.Client = clientModule.Client;
+      this.StdioClientTransport = stdioModule.StdioClientTransport;
+    }
+
     try {
-      const transport = new StdioClientTransport({
+      const transport = new this.StdioClientTransport({
         command: 'npx',
         args: ['-y', '@upstash/context7-mcp@latest'],
       });
 
-      this.client = new Client({
+      this.client = new this.Client({
         name: 'propiedades-mx-context7',
         version: '1.0.0',
       }, {
