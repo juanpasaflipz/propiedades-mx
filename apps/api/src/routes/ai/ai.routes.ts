@@ -63,7 +63,7 @@ const searchPropertiesFunction = {
   },
 };
 
-router.post('/api/ai/parse-search', async (req: Request, res: Response) => {
+router.post('/parse-search', async (req: Request, res: Response) => {
   try {
     const { query } = req.body;
 
