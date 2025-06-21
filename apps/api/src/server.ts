@@ -12,7 +12,7 @@ import { skipLogging, performanceMonitor, errorLogger } from './middleware/monit
 // Import routes
 import { propertyRoutes } from './routes/property.routes';
 import { adminRoutes } from './routes/admin.routes';
-import { aiRoutes } from './routes/ai.routes';
+import { aiRoutes } from './routes/ai/ai.routes';
 import { authRoutes } from './routes/auth.routes';
 import { healthRoutes } from './routes/health.routes';
 import { createAIEnhancedRoutes } from './routes/ai-enhanced.routes';
