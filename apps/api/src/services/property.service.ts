@@ -5,11 +5,11 @@ import { PropertySearch } from '../validation/property.schemas';
 
 export class PropertyService {
   constructor(
-    private pool: Pool,
-    private logger: Logger
+    protected pool: Pool,
+    protected logger: Logger
   ) {}
 
-  private mapDbRowToProperty(row: any): Property {
+  protected mapDbRowToProperty(row: any): Property {
     return {
       id: row.id.toString(),
       source: row.source,

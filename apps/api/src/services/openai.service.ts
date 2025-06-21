@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { PropertySearchFilters } from '../types';
 
 export class OpenAIService {
-  private openai: OpenAI;
+  protected openai: OpenAI;
 
   constructor() {
     if (!process.env.OPENAI_API_KEY) {
