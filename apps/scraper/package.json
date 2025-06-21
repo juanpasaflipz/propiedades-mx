@@ -15,7 +15,7 @@
   "dependencies": {
     "@aggregator/database": "*",
     "@aggregator/types": "*",
-    "@types/node": "^20.11.19",
+    "@types/node": "^24.0.3",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.10.9",
     "axios": "^1.10.0",
