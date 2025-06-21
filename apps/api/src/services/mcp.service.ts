@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { config } from '../config';
+import { env } from '../config/env';
 
 export interface MCPQueryResult {
   columns: string[];
@@ -43,7 +43,7 @@ class MCPService {
         args: [
           '-y',
           '@modelcontextprotocol/server-postgres',
-          config.database.url
+          env.DATABASE_URL
         ],
       });
 
