@@ -109,10 +109,11 @@ export abstract class BaseScraper {
               transaction_type, price_amount, price_currency,
               property_type, bedrooms, bathrooms, area_sqm,
               lot_size_sqm, amenities, images, description,
-              contact_info, listing_date, last_updated
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+              contact_info, listing_url, listing_date, last_updated
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
             ON CONFLICT (source, address, city) DO UPDATE SET
               price_amount = EXCLUDED.price_amount,
+              listing_url = EXCLUDED.listing_url,
               last_updated = CURRENT_TIMESTAMP`,
             [
               this.config.name,
@@ -136,6 +137,7 @@ export abstract class BaseScraper {
               property.images || [],
               property.description || '',
               property.contact_info || '',
+              property.listing_url || property.contact_info || '',
               property.listing_date || new Date(),
               new Date()
             ]

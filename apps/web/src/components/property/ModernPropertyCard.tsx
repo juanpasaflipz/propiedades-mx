@@ -19,6 +19,7 @@ interface PropertyCardProps {
   propertyType: string;
   transactionType: 'rent' | 'sale';
   featured?: boolean;
+  listingUrl?: string;
 }
 
 export function ModernPropertyCard({
@@ -33,6 +34,7 @@ export function ModernPropertyCard({
   propertyType,
   transactionType,
   featured = false,
+  listingUrl,
 }: PropertyCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { isFavorite, toggleFavorite } = useFavoritesContext();

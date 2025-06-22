@@ -38,7 +38,7 @@ export class PropertyController {
         bathrooms: property.bathrooms,
         area: property.area_sqm,
         imageUrl: property.images[0] || '/placeholder-property.svg',
-        listingUrl: property.contact_info || '#',
+        listingUrl: property.listing_url || property.contact_info || '#',
         description: property.description,
         publishedAt: property.listing_date,
       }));

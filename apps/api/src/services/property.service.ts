@@ -37,6 +37,7 @@ export class PropertyService {
       images: row.images || [],
       description: row.description || '',
       contact_info: row.contact_info || '',
+      listing_url: row.listing_url || row.contact_info || '',
       listing_date: row.listing_date || new Date().toISOString(),
       last_updated: row.last_updated || new Date().toISOString()
     };

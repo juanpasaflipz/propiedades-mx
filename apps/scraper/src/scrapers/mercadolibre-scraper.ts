@@ -148,7 +148,8 @@ export class MercadoLibreScraper extends BaseScraper {
       amenities: [],
       images: imageUrl ? [imageUrl] : [],
       description: '',
-      contact_info: href,
+      contact_info: '',
+      listing_url: href,
       listing_date: new Date(),
       last_updated: new Date()
     };

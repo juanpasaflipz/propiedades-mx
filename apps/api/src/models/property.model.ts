@@ -25,6 +25,7 @@ export interface Property {
   images: string[];
   description: string;
   contact_info: string;
+  listing_url?: string;
   listing_date: string;
   last_updated: string;
 } 
